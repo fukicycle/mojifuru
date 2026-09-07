@@ -17,6 +17,7 @@ import { claimLetter as claimLetterInRoom, subscribeRoom, submitRoomWord, type R
 import { signInAnonymouslyOnce } from '../firebase/config';
 
 const CHIP_COLORS = ['magenta', 'orange', 'aqua'] as const;
+const MAX_VISIBLE_AVATARS = 5;
 
 function colorForChar(char: string): (typeof CHIP_COLORS)[number] {
   let hash = 0;
@@ -203,6 +204,16 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const players = mode === 'room' ? Object.entries(room?.players ?? {}) : [];
   const totalScore = session.scoredWords.reduce((s, w) => s + w.totalPoints, 0);
 
+  // 対戦相手は補助情報のため、人数が増えても行が潰れないよう表示数の上限を設ける。
+  // 自分のアバターは常に表示対象に含める(上位に入っていなければ枠を1つ譲る)。
+  const sortedPlayers = [...players].sort(([, a], [, b]) => b.score - a.score);
+  let visiblePlayers = sortedPlayers.slice(0, MAX_VISIBLE_AVATARS);
+  if (uidRef.current && !visiblePlayers.some(([uid]) => uid === uidRef.current)) {
+    const selfEntry = sortedPlayers.find(([uid]) => uid === uidRef.current);
+    if (selfEntry) visiblePlayers = [...visiblePlayers.slice(0, MAX_VISIBLE_AVATARS - 1), selfEntry];
+  }
+  const hiddenPlayerCount = sortedPlayers.length - visiblePlayers.length;
+
   return (
     <div className="screen">
       <div className="hud-bar">
@@ -233,31 +244,37 @@ export default function GameScreen({ mode }: GameScreenProps) {
         </div>
       </div>
 
+      {mode === 'room' && players.length > 0 && (
+        <div className="player-avatars">
+          {visiblePlayers.map(([uid, player]) => {
+            const initial = (player.name || 'ゲ')[0];
+            return (
+              <div
+                key={uid}
+                className={`player-avatar player-avatar--${colorForChar(initial)} ${
+                  uid === uidRef.current ? 'player-avatar--self' : ''
+                }`}
+                title={player.name || 'ななしさん'}
+              >
+                <span>{initial}</span>
+                <span className="player-avatar-score">{player.score}</span>
+              </div>
+            );
+          })}
+          {hiddenPlayerCount > 0 && (
+            <div className="player-avatar player-avatar--more" title={`ほかに${hiddenPlayerCount}人`}>
+              <span>+{hiddenPlayerCount}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div
         className="falling-field"
         style={{ '--combo-decay': comboDecay } as CSSProperties}
         ref={fallingFieldRef}
         onPointerDown={handleFieldPointerDown}
       >
-        {mode === 'room' && players.length > 0 && (
-          <div className="player-avatars">
-            {players.map(([uid, player]) => {
-              const initial = (player.name || 'ゲ')[0];
-              return (
-                <div
-                  key={uid}
-                  className={`player-avatar player-avatar--${colorForChar(initial)} ${
-                    uid === uidRef.current ? 'player-avatar--self' : ''
-                  }`}
-                  title={player.name || 'ななしさん'}
-                >
-                  <span>{initial}</span>
-                  <span className="player-avatar-score">{player.score}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
         {session.feedback && (
           <div
             key={feedbackKey}

@@ -433,37 +433,32 @@ button {
 
 /*
  * 対戦相手の情報は「見たいのは点数・つぎの文字・収集した文字」という方針における
- * 補助情報。以前は専用の行として縦スペースを消費し、かつ人数が増えると
- * flexboxの縮小によって円が潰れて表示しきれなくなっていた。
- * プレイ面(falling-field)の角にオーバーレイとして重ね、独立したスクロール領域
- * (flex-shrink: 0の円+overflow-x auto)にすることで、他の行を圧迫せず、
- * 人数が増えても個々のアバターが潰れないようにする。
+ * 補助情報。プレイ面(falling-field)内へのオーバーレイ表示も試したが、
+ * overflow: hiddenと角丸によって自分マーカーの縁取りや得点バッジが切れてしまい、
+ * 実機では位置がずれて見えたり隣のアバターと重なったりする不具合が出た。
+ * 通常のflex行に戻しつつ、表示人数の上限(MAX_VISIBLE_AVATARS)を設けて
+ * flex-shrink: 0にすることで、人数が増えても行自体は伸縮させず、
+ * 個々のアバターが潰れたり重なったりしないようにする。
  */
 .player-avatars {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  left: 8px;
-  z-index: 2;
+  flex-shrink: 0;
   display: flex;
-  justify-content: flex-end;
-  gap: 5px;
-  overflow-x: auto;
-  pointer-events: none;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 10px;
 }
 
 .player-avatar {
   position: relative;
   flex-shrink: 0;
-  pointer-events: auto;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
@@ -473,9 +468,17 @@ button {
   outline-offset: 2px;
 }
 
+.player-avatar--more {
+  background: var(--bg-panel);
+  color: var(--text-soft);
+  font-size: 11px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
 .player-avatar-score {
   position: absolute;
-  bottom: -6px;
+  bottom: -8px;
   right: -6px;
   min-width: 16px;
   background: white;
