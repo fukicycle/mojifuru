@@ -91,6 +91,18 @@ button {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-soft);
+  /*
+   * PWA(ホーム画面追加)のstandalone表示では、apple-mobile-web-app-status-bar-style=
+   * black-translucentの効果でWebViewがステータスバー・ホームインジケーター領域まで
+   * 拡張される。#root側に安全領域ぶんの余白を作ると、そこにbodyの背景色(--bg)が
+   * 露出してapp-shellの背景色(--bg-panel)との間に段差が出てしまうため、
+   * 安全領域はapp-shell自身のpaddingとして内側に確保する
+   * (背景は端まで塗り、中身だけステータスバー・ホームインジケーターを避けて表示する)。
+   */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 @media (min-width: 480px) {
