@@ -1,15 +1,21 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Dawg, loadDawg } from '../game/dawg';
 import type { ScoreSummary } from '../game/scoring';
+import { generateDefaultName } from '../game/nameGenerator';
 import { isFirebaseConfigured } from '../firebase/config';
 
 const PLAYER_NAME_KEY = 'mojifuru:playerName';
 
+/** 未設定なら親しみやすいデフォルト名を生成し、以後も使えるよう保存する */
 function loadStoredName(): string {
   try {
-    return localStorage.getItem(PLAYER_NAME_KEY) ?? '';
+    const stored = localStorage.getItem(PLAYER_NAME_KEY);
+    if (stored) return stored;
+    const generated = generateDefaultName();
+    localStorage.setItem(PLAYER_NAME_KEY, generated);
+    return generated;
   } catch {
-    return '';
+    return generateDefaultName();
   }
 }
 

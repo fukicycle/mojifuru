@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
 import { subscribeTopScores, type LeaderboardRow } from '../firebase/leaderboard';
 
+const TOP_MEDALS = ['🥇', '🥈', '🥉'];
+
 export default function LeaderboardScreen() {
   const navigate = useNavigate();
   const { firebaseEnabled } = useGameContext();
@@ -10,7 +12,7 @@ export default function LeaderboardScreen() {
 
   useEffect(() => {
     if (!firebaseEnabled) return;
-    return subscribeTopScores(50, setRows);
+    return subscribeTopScores(undefined, setRows);
   }, [firebaseEnabled]);
 
   return (
@@ -24,15 +26,27 @@ export default function LeaderboardScreen() {
       {firebaseEnabled && rows === null && <p>読み込み中...</p>}
 
       {firebaseEnabled && rows !== null && (
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {rows.length === 0 && <p style={{ color: 'var(--text-soft)' }}>まだ記録がありません。一番乗りを目指そう!</p>}
-          {rows.map((row, i) => (
-            <div className="leaderboard-row" key={row.uid}>
-              <div className="leaderboard-rank">{i + 1}</div>
-              <div className="leaderboard-name">{row.name}</div>
-              <div className="leaderboard-score">{row.bestScore}点</div>
-            </div>
-          ))}
+          {rows.map((row, i) => {
+            const rank = i + 1;
+            const isTop3 = rank <= 3;
+            const isTop10 = rank <= 10;
+            return (
+              <div
+                className={
+                  'leaderboard-row' +
+                  (isTop10 ? ' leaderboard-row--top10' : '') +
+                  (isTop3 ? ` leaderboard-row--top${rank}` : '')
+                }
+                key={row.uid}
+              >
+                <div className="leaderboard-rank">{isTop3 ? TOP_MEDALS[rank - 1] : rank}</div>
+                <div className="leaderboard-name">{row.name}</div>
+                <div className="leaderboard-score">{row.bestScore}点</div>
+              </div>
+            );
+          })}
         </div>
       )}
 

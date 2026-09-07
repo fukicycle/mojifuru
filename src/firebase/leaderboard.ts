@@ -25,10 +25,11 @@ export interface LeaderboardRow extends LeaderboardEntry {
   uid: string;
 }
 
-/** 全体ランキング上位N件を取得する */
-export async function fetchTopScores(count = 50): Promise<LeaderboardRow[]> {
+/** 全体ランキングを取得する(全員分。countを指定した場合のみ件数を絞る) */
+export async function fetchTopScores(count?: number): Promise<LeaderboardRow[]> {
   const db = getFirebaseDb();
-  const leaderboardQuery = query(ref(db, 'leaderboard'), orderByChild('bestScore'), limitToLast(count));
+  const base = query(ref(db, 'leaderboard'), orderByChild('bestScore'));
+  const leaderboardQuery = count ? query(base, limitToLast(count)) : base;
   const snapshot = await get(leaderboardQuery);
   const rows: LeaderboardRow[] = [];
   snapshot.forEach((child) => {
@@ -37,10 +38,11 @@ export async function fetchTopScores(count = 50): Promise<LeaderboardRow[]> {
   return rows.sort((a, b) => b.bestScore - a.bestScore);
 }
 
-/** 全体ランキングの変化をリアルタイムに購読する */
-export function subscribeTopScores(count: number, onChange: (rows: LeaderboardRow[]) => void): () => void {
+/** 全体ランキングの変化をリアルタイムに購読する(全員分。countを指定した場合のみ件数を絞る) */
+export function subscribeTopScores(count: number | undefined, onChange: (rows: LeaderboardRow[]) => void): () => void {
   const db = getFirebaseDb();
-  const leaderboardQuery = query(ref(db, 'leaderboard'), orderByChild('bestScore'), limitToLast(count));
+  const base = query(ref(db, 'leaderboard'), orderByChild('bestScore'));
+  const leaderboardQuery = count ? query(base, limitToLast(count)) : base;
   return onValue(leaderboardQuery, (snapshot) => {
     const rows: LeaderboardRow[] = [];
     snapshot.forEach((child) => {

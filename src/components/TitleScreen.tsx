@@ -12,14 +12,16 @@ export default function TitleScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const effectiveName = playerName.trim() || 'ななしさん';
+  const trimmedName = playerName.trim();
+  const nameMissing = trimmedName.length === 0;
 
   async function handleCreateRoom() {
+    if (nameMissing) return;
     setBusy(true);
     setError(null);
     try {
       const uid = await signInAnonymouslyOnce();
-      const roomId = await createRoom(uid, effectiveName);
+      const roomId = await createRoom(uid, trimmedName);
       navigate(`/room/${roomId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -29,13 +31,14 @@ export default function TitleScreen() {
   }
 
   async function handleJoinRoom() {
+    if (nameMissing) return;
     const roomId = roomCodeInput.trim().toUpperCase();
     if (!roomId) return;
     setBusy(true);
     setError(null);
     try {
       const uid = await signInAnonymouslyOnce();
-      const room = await joinRoom(roomId, uid, effectiveName);
+      const room = await joinRoom(roomId, uid, trimmedName);
       if (!room) {
         setError('ルームが見つかりませんでした。ルームコードを確認してください。');
         return;
@@ -55,17 +58,25 @@ export default function TitleScreen() {
 
       <input
         className="text-input"
-        placeholder="なまえ(ランキング表示用・省略可)"
+        placeholder="なまえ(必須)"
         value={playerName}
         maxLength={20}
+        required
         onChange={(e) => setPlayerName(e.target.value)}
-        style={{ maxWidth: 280, marginBottom: 8 }}
+        style={{ maxWidth: 280, marginBottom: nameMissing ? 4 : 8 }}
       />
+      {nameMissing && (
+        <p style={{ color: 'crimson', fontSize: 13, marginTop: 0, marginBottom: 8 }}>なまえを入力してください</p>
+      )}
 
       {dawgError && <p style={{ color: 'crimson', fontSize: 13 }}>辞書の読み込みに失敗しました: {dawgError}</p>}
 
       <div className="button-row">
-        <button className="button button--primary button--block" disabled={!dawg} onClick={() => navigate('/game')}>
+        <button
+          className="button button--primary button--block"
+          disabled={!dawg || nameMissing}
+          onClick={() => navigate('/game')}
+        >
           {dawg ? 'ひとりで遊ぶ' : '辞書を読み込み中...'}
         </button>
 
@@ -81,7 +92,11 @@ export default function TitleScreen() {
               </p>
             ) : (
               <>
-                <button className="button button--secondary button--block" disabled={busy} onClick={handleCreateRoom}>
+                <button
+                  className="button button--secondary button--block"
+                  disabled={busy || nameMissing}
+                  onClick={handleCreateRoom}
+                >
                   ルームをつくる
                 </button>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -92,7 +107,11 @@ export default function TitleScreen() {
                     maxLength={6}
                     onChange={(e) => setRoomCodeInput(e.target.value)}
                   />
-                  <button className="button button--secondary" disabled={busy || !roomCodeInput} onClick={handleJoinRoom}>
+                  <button
+                    className="button button--secondary"
+                    disabled={busy || nameMissing || !roomCodeInput}
+                    onClick={handleJoinRoom}
+                  >
                     参加
                   </button>
                 </div>

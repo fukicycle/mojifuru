@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
 import { signInAnonymouslyOnce } from '../firebase/config';
@@ -15,23 +15,29 @@ export default function ResultScreen() {
   const navigate = useNavigate();
   const { lastResult, playerName, firebaseEnabled } = useGameContext();
   const [submitState, setSubmitState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const submittedRef = useRef(false);
 
   useEffect(() => {
     if (!lastResult) navigate('/', { replace: true });
   }, [lastResult, navigate]);
 
-  if (!lastResult) return null;
-
-  async function handleSubmit() {
+  useEffect(() => {
+    if (!lastResult || !firebaseEnabled || submittedRef.current) return;
+    submittedRef.current = true;
+    const name = playerName.trim();
     setSubmitState('sending');
-    try {
-      const uid = await signInAnonymouslyOnce();
-      await submitScore(uid, playerName.trim() || 'ななしさん', lastResult!.totalScore);
-      setSubmitState('done');
-    } catch {
-      setSubmitState('error');
-    }
-  }
+    (async () => {
+      try {
+        const uid = await signInAnonymouslyOnce();
+        await submitScore(uid, name, lastResult.totalScore);
+        setSubmitState('done');
+      } catch {
+        setSubmitState('error');
+      }
+    })();
+  }, [lastResult, firebaseEnabled, playerName]);
+
+  if (!lastResult) return null;
 
   return (
     <div className="screen">
@@ -43,6 +49,13 @@ export default function ResultScreen() {
           <span>ボーナス {lastResult.bonusCount}回</span>
           <span>大ボーナス {lastResult.grandBonusCount}回</span>
         </div>
+        {firebaseEnabled && (
+          <p style={{ fontSize: 12, color: 'var(--text-soft)', marginTop: 6 }}>
+            {submitState === 'sending' && 'ランキングに登録中...'}
+            {submitState === 'done' && 'ランキングに登録しました!'}
+            {submitState === 'error' && 'ランキングへの登録に失敗しました'}
+          </p>
+        )}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -78,11 +91,8 @@ export default function ResultScreen() {
 
       <div className="button-row" style={{ margin: '0 auto' }}>
         {firebaseEnabled && (
-          <button className="button button--secondary button--block" disabled={submitState !== 'idle'} onClick={handleSubmit}>
-            {submitState === 'idle' && 'ランキングに登録'}
-            {submitState === 'sending' && '登録中...'}
-            {submitState === 'done' && '登録しました!'}
-            {submitState === 'error' && '登録に失敗しました'}
+          <button className="button button--secondary button--block" onClick={() => navigate('/leaderboard')}>
+            ランキングを見る
           </button>
         )}
         <button className="button button--primary button--block" onClick={() => navigate('/game')}>
