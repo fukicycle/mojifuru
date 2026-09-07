@@ -54,6 +54,18 @@ npm run build
 
 Firebaseを設定しない場合でも「ひとりで遊ぶ」モードは通常どおり動作します。
 
+## PWA対応
+
+`vite-plugin-pwa`(generateSWモード)によりオフライン起動・ホーム画面追加に対応しています。
+
+- アイコン一式(`public/pwa-192.png` / `pwa-512.png` / `apple-touch-icon.png` / `favicon-96.png`)は
+  ブランドカラー(マゼンタ→オレンジ→アクアのグラデーション)+「も」の白抜き文字で、`public/favicon.svg`
+  と同じデザインコンセプト。maskableアイコン(Androidの各種形状マスク)のセーフゾーンに収まるよう調整済み
+- `npm run build` 時に `dist/sw.js` が生成され、JS/CSS/HTMLに加えて辞書データ(`dict.dawg` /
+  `wordlist.json`)も事前キャッシュされるため、初回読み込み後はオフラインでも起動・プレイできます
+- マニフェストの `start_url` / `scope` はビルド時に `vite.config.ts` の `base`(`/mojifuru/`)へ
+  自動的に合わせて解決されます
+
 ## GitHub Pagesへのデプロイ
 
 `vite.config.ts` の `base` はリポジトリ名 `mojifuru` を前提に `/mojifuru/` を設定しています。
