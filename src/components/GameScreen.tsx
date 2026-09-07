@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
 import { useGameSession } from '../hooks/useGameSession';
@@ -28,6 +28,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
 
   const [room, setRoom] = useState<Room | null>(null);
   const uidRef = useRef<string | null>(null);
+  const fallingFieldRef = useRef<HTMLDivElement | null>(null);
   const roomReady = mode === 'solo' || (room !== null && room.startAt !== null);
   const isPlayfieldReady = Boolean(dawg) && roomReady;
 
@@ -95,6 +96,48 @@ export default function GameScreen({ mode }: GameScreenProps) {
     onFinish: handleFinish,
   });
 
+  const takenLetters = mode === 'room' ? room?.takenLetters : undefined;
+  const visibleFallingLetters =
+    mode === 'room' && takenLetters
+      ? session.fallingLetters.filter((letter) => !takenLetters[letter.id])
+      : session.fallingLetters;
+
+  /*
+   * 落下中の文字同士が接近/重なると、見た目の円(44px)より広い当たり判定(64px)が
+   * 隣の文字の当たり判定と重なり合い、DOM描画順(後から出現した文字が上)に
+   * よってタップが意図しない方の文字に奪われてしまう。
+   * これを避けるため、各文字ボタン個別のヒットテストには頼らず、
+   * プレイ面全体で1つのpointerdownを受け、タップ座標に最も近い中心を持つ文字を
+   * 当たり判定半径内から選んで取得する方式にする。
+   */
+  const HIT_RADIUS_PX = 32;
+  // elapsedMsが毎フレーム変わるため、useCallbackで包んでもメモ化の恩恵はない。
+  const handleFieldPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const field = fallingFieldRef.current;
+    if (!field) return;
+    const rect = field.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+
+    let closest: FallingLetter | null = null;
+    let closestDist = Infinity;
+    for (const letter of visibleFallingLetters) {
+      const progress = fallingProgress(letter, session.elapsedMs);
+      const lx = letter.x * rect.width;
+      const ly = (progress * 0.92 + 0.04) * rect.height;
+      const dist = Math.hypot(px - lx, py - ly);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = letter;
+      }
+    }
+
+    if (closest && closestDist <= HIT_RADIUS_PX) {
+      e.preventDefault();
+      session.collectLetter(closest.id, closest.char);
+    }
+  };
+
   if (mode === 'room' && !firebaseEnabled) {
     return (
       <div className="screen screen--center">
@@ -124,11 +167,6 @@ export default function GameScreen({ mode }: GameScreenProps) {
 
   const canConfirm = session.currentWord.length >= MIN_WORD_LENGTH;
   const comboDecay = 1 - currentComboMultiplier(session.scoredWords);
-  const takenLetters = mode === 'room' ? room?.takenLetters : undefined;
-  const visibleFallingLetters =
-    mode === 'room' && takenLetters
-      ? session.fallingLetters.filter((letter) => !takenLetters[letter.id])
-      : session.fallingLetters;
   const players = mode === 'room' ? Object.entries(room?.players ?? {}) : [];
 
   return (
@@ -160,26 +198,25 @@ export default function GameScreen({ mode }: GameScreenProps) {
         </div>
       )}
 
-      <div className="falling-field" style={{ '--combo-decay': comboDecay } as CSSProperties}>
+      <div
+        className="falling-field"
+        style={{ '--combo-decay': comboDecay } as CSSProperties}
+        ref={fallingFieldRef}
+        onPointerDown={handleFieldPointerDown}
+      >
         <div className={`field-status field-status--${feedbackClass(session.feedback)}`}>
           {feedbackMessage(session.feedback)}
         </div>
         {visibleFallingLetters.map((letter: FallingLetter) => {
           const progress = fallingProgress(letter, session.elapsedMs);
           return (
-            <button
+            <div
               key={letter.id}
               className="letter-chip-hit"
               style={{ left: `${letter.x * 100}%`, top: `${progress * 92 + 4}%` }}
-              onPointerDown={(e) => {
-                // 移動中の的をタップする都合上、touchend/clickではなく
-                // 指が触れた瞬間(pointerdown)で即座に取得判定する。
-                e.preventDefault();
-                session.collectLetter(letter.id, letter.char);
-              }}
             >
               <span className={`letter-chip letter-chip--${colorForChar(letter.char)}`}>{letter.char}</span>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -199,10 +236,26 @@ export default function GameScreen({ mode }: GameScreenProps) {
       </div>
 
       <div className="word-controls">
-        <button className="button button--primary button--confirm" disabled={!canConfirm} onClick={session.confirmWord}>
+        <button
+          className="button button--primary button--confirm"
+          disabled={!canConfirm}
+          onPointerDown={(e) => {
+            // 落下中の文字と同様、click(pointerup後の遅延あるイベント)ではなく
+            // pointerdownで即座に確定させ、反応の悪さを解消する。
+            e.preventDefault();
+            if (canConfirm) session.confirmWord();
+          }}
+        >
           この単語で確定
         </button>
-        <button className="button button--ghost button--clear-all" onClick={session.clearWord} disabled={!session.currentWord}>
+        <button
+          className="button button--ghost button--clear-all"
+          disabled={!session.currentWord}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            if (session.currentWord) session.clearWord();
+          }}
+        >
           ぜんぶクリア
         </button>
       </div>

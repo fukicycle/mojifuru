@@ -161,6 +161,8 @@ button {
   color: white;
   box-shadow: var(--shadow-soft);
   transition: transform 0.1s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .button:active {
@@ -381,6 +383,8 @@ button {
   border-radius: 20px;
   overflow: hidden;
   border: 2px solid var(--border);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /*
@@ -431,24 +435,20 @@ button {
 }
 
 /*
- * 降ってくる文字のタップ判定は見た目の円(44px)より一回り大きい当たり判定(64px)を
- * 別要素(.letter-chip-hit)として持たせる。指の下に見えている円がわずかでも
- * ズレるだけで取得できない、という取りこぼしストレスを軽減するため。
+ * 降ってくる文字の当たり判定は、この要素個別のタップではなく.falling-field側で
+ * 一括して(タップ座標に最も近い文字を選ぶ方式で)判定している。ここは見た目の
+ * 位置決めだけを担う純粋な表示用要素なので、pointer-events: noneにして
+ * タップイベントは常に親(.falling-field)へ素通りさせる。
  */
 .letter-chip-hit {
   position: absolute;
   transform: translate(-50%, -50%);
   width: 64px;
   height: 64px;
-  border: none;
-  background: transparent;
-  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+  pointer-events: none;
 }
 
 .letter-chip {
