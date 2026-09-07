@@ -12,11 +12,20 @@ export default function RoomResultScreen() {
   const [restarting, setRestarting] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
+  // ゲーム終了間際の「確定」連打の残りタップが、同じ画面位置にある
+  // 「もう一度あそぶ」を誤って発火させないよう、遷移直後は操作を受け付けない。
+  // ルーム対戦では全員を巻き込む再戦になるため、ソロ版より重要な対策。
+  const [controlsReady, setControlsReady] = useState(false);
 
   useEffect(() => {
     if (!firebaseEnabled) return;
     signInAnonymouslyOnce().then(setUid);
   }, [firebaseEnabled]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setControlsReady(true), 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (!roomId || !firebaseEnabled) return;
@@ -77,11 +86,16 @@ export default function RoomResultScreen() {
       {syncError && <p style={{ color: 'crimson', fontSize: 13, textAlign: 'center' }}>{syncError}</p>}
 
       <div className="button-row" style={{ margin: '16px auto 0' }}>
-        <button className="button button--primary button--block" onClick={handleRematch} disabled={restarting}>
+        <button
+          className="button button--primary button--block"
+          onClick={handleRematch}
+          disabled={restarting || !controlsReady}
+        >
           もう一度あそぶ
         </button>
         <button
           className="button button--ghost button--block"
+          disabled={!controlsReady}
           onClick={() => {
             if (roomId && uid) void leaveRoom(roomId, uid);
             navigate('/');

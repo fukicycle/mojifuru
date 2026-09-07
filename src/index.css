@@ -322,6 +322,51 @@ button {
 }
 
 /*
+ * 得点は「現在の自分の得点がわかりづらい」というフィードバックを受け、
+ * プレイ中つねに目に入るタイマーと並べて上部に配置する(古典的なスコア/タイマーの
+ * HUD配置)。加点のたびにvalueをkeyごと再マウントしてポップ演出を再生させ、
+ * 変化そのものにも気付けるようにする。
+ */
+.stat-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.score-display {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.score-display-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.score-display-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+  animation: score-pop 0.35s ease-out;
+}
+
+@keyframes score-pop {
+  0% {
+    transform: scale(1.4);
+    color: var(--color-magenta-strong);
+  }
+  100% {
+    transform: scale(1);
+    color: var(--text-h);
+  }
+}
+
+/*
  * 直近3文字までの「つぎ」プレビュー。手前(次にスポーンする文字)ほど大きく、
  * 奥ほど小さく・薄くすることで、Tetrisのネクスト表示のような遠近感を出す。
  */

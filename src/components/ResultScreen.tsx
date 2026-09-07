@@ -16,10 +16,19 @@ export default function ResultScreen() {
   const { lastResult, playerName, firebaseEnabled } = useGameContext();
   const [submitState, setSubmitState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
   const submittedRef = useRef(false);
+  // プレイ終了間際は「確定」ボタンを連打しがちで、その残り連打がそのまま
+  // 同じ画面位置にある「もう一度あそぶ」を誤タップしてしまう事故を防ぐため、
+  // 遷移直後の短い間だけボタン操作を受け付けない。
+  const [controlsReady, setControlsReady] = useState(false);
 
   useEffect(() => {
     if (!lastResult) navigate('/', { replace: true });
   }, [lastResult, navigate]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setControlsReady(true), 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (!lastResult || !firebaseEnabled || submittedRef.current) return;
@@ -91,14 +100,26 @@ export default function ResultScreen() {
 
       <div className="button-row" style={{ margin: '0 auto' }}>
         {firebaseEnabled && (
-          <button className="button button--secondary button--block" onClick={() => navigate('/leaderboard')}>
+          <button
+            className="button button--secondary button--block"
+            disabled={!controlsReady}
+            onClick={() => navigate('/leaderboard')}
+          >
             ランキングを見る
           </button>
         )}
-        <button className="button button--primary button--block" onClick={() => navigate('/game')}>
+        <button
+          className="button button--primary button--block"
+          disabled={!controlsReady}
+          onClick={() => navigate('/game')}
+        >
           もう一度あそぶ
         </button>
-        <button className="button button--ghost button--block" onClick={() => navigate('/')}>
+        <button
+          className="button button--ghost button--block"
+          disabled={!controlsReady}
+          onClick={() => navigate('/')}
+        >
           タイトルへ
         </button>
       </div>

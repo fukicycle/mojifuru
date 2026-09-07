@@ -201,11 +201,21 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const canConfirm = session.currentWord.length >= MIN_WORD_LENGTH;
   const comboDecay = 1 - currentComboMultiplier(session.scoredWords);
   const players = mode === 'room' ? Object.entries(room?.players ?? {}) : [];
+  const totalScore = session.scoredWords.reduce((s, w) => s + w.totalPoints, 0);
 
   return (
     <div className="screen">
       <div className="game-header">
         <div className="bonus-badge">5文字でボーナス!7文字で大ボーナス!!</div>
+      </div>
+
+      <div className="stat-bar">
+        <div className="score-display">
+          <span className="score-display-label">とくてん</span>
+          <span key={totalScore} className="score-display-value">
+            {totalScore}
+          </span>
+        </div>
         <div className={`timer ${session.remainingSeconds <= 10 ? 'timer--urgent' : ''}`}>
           {session.remainingSeconds}秒
         </div>
@@ -319,9 +329,6 @@ export default function GameScreen({ mode }: GameScreenProps) {
       </div>
 
       <div className="score-strip">
-        <span>
-          得点: <strong>{session.scoredWords.reduce((s, w) => s + w.totalPoints, 0)}</strong>
-        </span>
         <span>
           成立: <strong>{session.scoredWords.length}</strong>語
         </span>
