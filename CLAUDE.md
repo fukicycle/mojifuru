@@ -65,7 +65,10 @@ mojifuru/
 ## RTDBスキーマ
 
 ```
-/leaderboard/{uid}: { name, bestScore, updatedAt }
+/leaderboard
+  ├─ allTime/{uid}: { name, bestScore, updatedAt }
+  ├─ daily/{yyyy-mm-dd}/{uid}: { name, bestScore, updatedAt }
+  └─ monthly/{yyyy-mm}/{uid}: { name, bestScore, updatedAt }
 
 /rooms/{roomId}
   ├─ seed: <number>
@@ -76,6 +79,9 @@ mojifuru/
 
 /wordCandidates/{word}: { count, firstSeenAt }
 ```
+
+- ランキングはデイリー・マンスリー・全期間の3種類。日付/月の境界はJST(UTC+9)固定で計算する
+- 各期間ごとに独立して「自己ベストのみ更新」を行う(daily/monthlyは過去分のノードが自動削除されない前提。バックエンドがないため古いノードの掃除は行わない)
 
 ## セキュリティルールの必須要件
 

@@ -1,21 +1,29 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
-import { subscribeTopScores, type LeaderboardRow } from '../firebase/leaderboard';
+import { subscribeTopScores, type LeaderboardPeriod, type LeaderboardRow } from '../firebase/leaderboard';
 
 const TOP_MEDALS = ['🥇', '🥈', '🥉'];
 // 表彰台の見た目の並び順(向かって左から2位・1位・3位)
 const PODIUM_DISPLAY_ORDER = [1, 0, 2];
 
+const PERIOD_TABS: { period: LeaderboardPeriod; label: string }[] = [
+  { period: 'daily', label: 'デイリー' },
+  { period: 'monthly', label: 'マンスリー' },
+  { period: 'allTime', label: '全期間' },
+];
+
 export default function LeaderboardScreen() {
   const navigate = useNavigate();
   const { firebaseEnabled } = useGameContext();
+  const [period, setPeriod] = useState<LeaderboardPeriod>('daily');
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null);
 
   useEffect(() => {
     if (!firebaseEnabled) return;
-    return subscribeTopScores(undefined, setRows);
-  }, [firebaseEnabled]);
+    setRows(null);
+    return subscribeTopScores(period, undefined, setRows);
+  }, [firebaseEnabled, period]);
 
   const top3 = rows?.slice(0, 3) ?? [];
   const rest = rows?.slice(3) ?? [];
@@ -25,6 +33,18 @@ export default function LeaderboardScreen() {
       <h2 className="leaderboard-title">
         <span aria-hidden="true">🎉</span> ランキング <span aria-hidden="true">🎉</span>
       </h2>
+
+      <div className="tab-row" style={{ justifyContent: 'center' }}>
+        {PERIOD_TABS.map((tab) => (
+          <button
+            key={tab.period}
+            className={'tab-button' + (period === tab.period ? ' is-active' : '')}
+            onClick={() => setPeriod(tab.period)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {!firebaseEnabled && (
         <p style={{ color: 'var(--text-soft)', fontSize: 14 }}>Firebaseが未設定のため、ランキングは利用できません。</p>
