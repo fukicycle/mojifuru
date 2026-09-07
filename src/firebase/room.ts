@@ -93,11 +93,25 @@ export async function resetOwnRoundState(roomId: string, uid: string): Promise<v
   await update(ref(db, `rooms/${roomId}/players/${uid}`), { score: 0, wordsFormed: null });
 }
 
-export function subscribeRoom(roomId: string, onChange: (room: Room | null) => void): () => void {
+export function subscribeRoom(
+  roomId: string,
+  onChange: (room: Room | null) => void,
+  onError?: (error: Error) => void,
+): () => void {
   const db = getFirebaseDb();
-  return onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
-    onChange(snapshot.exists() ? (snapshot.val() as Room) : null);
-  });
+  return onValue(
+    ref(db, `rooms/${roomId}`),
+    (snapshot) => {
+      onChange(snapshot.exists() ? (snapshot.val() as Room) : null);
+    },
+    (error) => {
+      // onValueは購読中にエラーが起きると以後コールバックが呼ばれなくなる。
+      // ここで拾わないと「相手の画面が反映されない」ように見えるだけで
+      // 原因(権限エラー等)が一切わからなくなるため、必ず呼び出し元へ伝える。
+      console.error(`[mojifuru] rooms/${roomId} の購読に失敗しました`, error);
+      onError?.(error);
+    },
+  );
 }
 
 /**

@@ -106,11 +106,13 @@ export default function TitleScreen() {
                     value={roomCodeInput}
                     maxLength={6}
                     onChange={(e) => setRoomCodeInput(e.target.value)}
+                    style={{ flex: 1, minWidth: 0 }}
                   />
                   <button
                     className="button button--secondary"
                     disabled={busy || nameMissing || !roomCodeInput}
                     onClick={handleJoinRoom}
+                    style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
                   >
                     参加
                   </button>

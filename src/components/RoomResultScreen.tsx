@@ -9,10 +9,13 @@ export default function RoomResultScreen() {
   const { firebaseEnabled } = useGameContext();
   const [room, setRoom] = useState<Room | null>(null);
   const [restarting, setRestarting] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!roomId || !firebaseEnabled) return;
-    return subscribeRoom(roomId, setRoom);
+    return subscribeRoom(roomId, setRoom, (error) =>
+      setSyncError(`ルームの同期に失敗しました: ${error.message}`),
+    );
   }, [roomId, firebaseEnabled]);
 
   // 誰か1人が「もう一度あそぶ」を押してstartAtがリセットされたら、
@@ -29,6 +32,8 @@ export default function RoomResultScreen() {
     setRestarting(true);
     try {
       await restartRoom(roomId!);
+    } catch (error) {
+      setSyncError(`再戦の開始に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setRestarting(false);
     }
@@ -59,6 +64,8 @@ export default function RoomResultScreen() {
           </div>
         ))}
       </div>
+
+      {syncError && <p style={{ color: 'crimson', fontSize: 13, textAlign: 'center' }}>{syncError}</p>}
 
       <div className="button-row" style={{ margin: '16px auto 0' }}>
         <button className="button button--primary button--block" onClick={handleRematch} disabled={restarting}>

@@ -11,6 +11,7 @@ export default function RoomLobbyScreen() {
   const [room, setRoom] = useState<Room | null>(null);
   const [copied, setCopied] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!firebaseEnabled) return;
@@ -19,7 +20,9 @@ export default function RoomLobbyScreen() {
 
   useEffect(() => {
     if (!roomId || !firebaseEnabled) return;
-    return subscribeRoom(roomId, setRoom);
+    return subscribeRoom(roomId, setRoom, (error) =>
+      setSyncError(`ルームの同期に失敗しました: ${error.message}`),
+    );
   }, [roomId, firebaseEnabled]);
 
   useEffect(() => {
@@ -79,8 +82,18 @@ export default function RoomLobbyScreen() {
         {players.length === 0 && <p style={{ color: 'var(--text-soft)' }}>参加者を待っています...</p>}
       </div>
 
+      {syncError && <p style={{ color: 'crimson', fontSize: 13, marginTop: 8 }}>{syncError}</p>}
+
       <div className="button-row" style={{ marginTop: 16 }}>
-        <button className="button button--primary button--block" onClick={() => roomId && startRoom(roomId)}>
+        <button
+          className="button button--primary button--block"
+          onClick={() =>
+            roomId &&
+            startRoom(roomId).catch((error: unknown) =>
+              setSyncError(`ゲームの開始に失敗しました: ${error instanceof Error ? error.message : String(error)}`),
+            )
+          }
+        >
           ゲーム開始
         </button>
         <button className="button button--ghost button--block" onClick={() => navigate('/')}>

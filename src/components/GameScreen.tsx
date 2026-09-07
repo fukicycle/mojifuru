@@ -27,6 +27,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const { dawg, dawgError, setLastResult, playerName, firebaseEnabled, setIsPlaying } = useGameContext();
 
   const [room, setRoom] = useState<Room | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const uidRef = useRef<string | null>(null);
   const fallingFieldRef = useRef<HTMLDivElement | null>(null);
   const roomReady = mode === 'solo' || (room !== null && room.startAt !== null);
@@ -44,7 +45,9 @@ export default function GameScreen({ mode }: GameScreenProps) {
     let unsubscribe: (() => void) | undefined;
     signInAnonymouslyOnce().then((uid) => {
       uidRef.current = uid;
-      unsubscribe = subscribeRoom(roomId, setRoom);
+      unsubscribe = subscribeRoom(roomId, setRoom, (error) =>
+        setSyncError(`ルームの同期に失敗しました: ${error.message}`),
+      );
     });
     return () => unsubscribe?.();
   }, [mode, roomId, firebaseEnabled]);
@@ -161,6 +164,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
     return (
       <div className="screen screen--center">
         <p>{mode === 'room' ? 'ホストの開始を待っています...' : '辞書を読み込み中...'}</p>
+        {syncError && <p style={{ color: 'crimson', fontSize: 13 }}>{syncError}</p>}
       </div>
     );
   }
