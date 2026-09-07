@@ -9,6 +9,7 @@ import WordListScreen from './components/WordListScreen';
 import LicensePage from './components/LicensePage';
 import RoomLobbyScreen from './components/RoomLobbyScreen';
 import RoomResultScreen from './components/RoomResultScreen';
+import UpdateNotice from './components/UpdateNotice';
 
 export default function App() {
   useEffect(() => {
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/room/:roomId/play" element={<GameScreen mode="room" />} />
             <Route path="/room/:roomId/result" element={<RoomResultScreen />} />
           </Routes>
+          <UpdateNotice />
         </div>
       </BrowserRouter>
     </GameProvider>

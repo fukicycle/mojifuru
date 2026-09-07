@@ -17,7 +17,11 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'autoUpdate'は新バージョンをバックグラウンドで無言適用するため反映まで時間がかかる。
+      // 'prompt'にしてSWの登録・更新確認をアプリ側(UpdateNotice)で明示的に制御し、
+      // ユーザが能動的に「今すぐ更新」できるようにする。
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'favicon-96.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'もじふる',
