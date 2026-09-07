@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
 import { useGameSession } from '../hooks/useGameSession';
 import { fallingProgress, type FallingLetter } from '../game/fallingLetters';
 import { MIN_WORD_LENGTH } from '../game/wordValidator';
-import type { ScoreSummary } from '../game/scoring';
+import { currentComboMultiplier, type ScoreSummary } from '../game/scoring';
 import { reportUnregisteredWord } from '../firebase/wordCandidates';
 import { claimLetter as claimLetterInRoom, subscribeRoom, submitRoomWord, type Room } from '../firebase/room';
 import { signInAnonymouslyOnce } from '../firebase/config';
@@ -115,6 +115,13 @@ export default function GameScreen({ mode }: GameScreenProps) {
   }
 
   const canConfirm = session.currentWord.length >= MIN_WORD_LENGTH;
+  const comboDecay = 1 - currentComboMultiplier(session.scoredWords);
+  const takenLetters = mode === 'room' ? room?.takenLetters : undefined;
+  const visibleFallingLetters =
+    mode === 'room' && takenLetters
+      ? session.fallingLetters.filter((letter) => !takenLetters[letter.id])
+      : session.fallingLetters;
+  const players = mode === 'room' ? Object.entries(room?.players ?? {}) : [];
 
   return (
     <div className="screen">
@@ -125,8 +132,31 @@ export default function GameScreen({ mode }: GameScreenProps) {
         </div>
       </div>
 
-      <div className="falling-field">
-        {session.fallingLetters.map((letter: FallingLetter) => {
+      {mode === 'room' && players.length > 0 && (
+        <div className="player-avatars">
+          {players.map(([uid, player]) => {
+            const initial = (player.name || 'ゲ')[0];
+            return (
+              <div
+                key={uid}
+                className={`player-avatar player-avatar--${colorForChar(initial)} ${
+                  uid === uidRef.current ? 'player-avatar--self' : ''
+                }`}
+                title={player.name || 'ななしさん'}
+              >
+                <span>{initial}</span>
+                <span className="player-avatar-score">{player.score}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="falling-field" style={{ '--combo-decay': comboDecay } as CSSProperties}>
+        <div className={`field-status field-status--${feedbackClass(session.feedback)}`}>
+          {feedbackMessage(session.feedback)}
+        </div>
+        {visibleFallingLetters.map((letter: FallingLetter) => {
           const progress = fallingProgress(letter, session.elapsedMs);
           return (
             <button
@@ -145,8 +175,6 @@ export default function GameScreen({ mode }: GameScreenProps) {
           );
         })}
       </div>
-
-      <div className={`feedback-toast ${feedbackClass(session.feedback)}`}>{feedbackMessage(session.feedback)}</div>
 
       <div className="current-word-bar">
         <div className="current-word-slots">
@@ -185,15 +213,15 @@ export default function GameScreen({ mode }: GameScreenProps) {
 }
 
 function feedbackClass(feedback: ReturnType<typeof useGameSession>['feedback']): string {
-  if (!feedback) return 'feedback-toast--empty';
-  if (feedback.status === 'valid') return 'feedback-toast--valid';
-  if (feedback.status === 'unregistered') return 'feedback-toast--unregistered';
-  return 'feedback-toast--empty';
+  if (!feedback) return 'empty';
+  if (feedback.status === 'valid') return 'valid';
+  return 'unregistered';
 }
 
 function feedbackMessage(feedback: ReturnType<typeof useGameSession>['feedback']): string {
   if (!feedback) return '';
   if (feedback.status === 'valid') return `「${feedback.word}」+${feedback.points}点!`;
-  if (feedback.status === 'unregistered') return `「${feedback.word}」は未登録の単語でした(0点)`;
+  if (feedback.status === 'unregistered') return `「${feedback.word}」はなかった!`;
+  if (feedback.status === 'taken') return `「${feedback.word}」はほかのプレイヤーが先にとりました!`;
   return '';
 }

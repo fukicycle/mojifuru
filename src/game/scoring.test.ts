@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bonusTierForLength, scoreWord, summarizeScore } from './scoring';
+import { countTrailingShortStreak, bonusTierForLength, scoreWord, summarizeScore } from './scoring';
 
 describe('bonusTierForLength', () => {
   it('4文字以下はボーナスなし', () => {
@@ -17,31 +17,63 @@ describe('bonusTierForLength', () => {
 });
 
 describe('scoreWord', () => {
-  it('文字数に応じた基礎点を計算する', () => {
-    const result = scoreWord('ねこ');
-    expect(result.length).toBe(2);
-    expect(result.basePoints).toBe(20);
-    expect(result.bonusTier).toBe('none');
-    expect(result.totalPoints).toBe(20);
+  it('文字数に応じて基礎点が指数的に増える(連続なしなら等倍)', () => {
+    expect(scoreWord('ねこ').totalPoints).toBe(10); // 2文字
+    expect(scoreWord('つくえ').totalPoints).toBe(17); // 3文字
+    expect(scoreWord('ひまわり').totalPoints).toBe(29); // 4文字
+    expect(scoreWord('あいうえお').totalPoints).toBe(49); // 5文字
+    expect(scoreWord('あいうえおかき').totalPoints).toBe(142); // 7文字
   });
 
-  it('5文字以上でボーナス倍率がかかる', () => {
-    const result = scoreWord('ひまわり');
-    expect(result.length).toBe(4);
-    expect(result.bonusTier).toBe('none');
-
-    const bonusResult = scoreWord('たんぽぽばたけ');
-    expect(bonusResult.length).toBe(7);
-    expect(bonusResult.bonusTier).toBe('grand-bonus');
-    expect(bonusResult.totalPoints).toBeGreaterThan(bonusResult.basePoints);
+  it('文字数が増えるほど基礎点の増加幅も大きくなる', () => {
+    const four = scoreWord('ひまわり').basePoints;
+    const five = scoreWord('あいうえお').basePoints;
+    const seven = scoreWord('あいうえおかき').basePoints;
+    expect(five - four).toBeGreaterThan(1);
+    expect(seven).toBeGreaterThan(five * 2);
   });
 
-  it('大ボーナスの倍率はボーナスより高い', () => {
-    const bonus = scoreWord('あいうえお'); // 5文字
-    const grand = scoreWord('あいうえおかき'); // 7文字
-    const bonusRate = bonus.totalPoints / bonus.basePoints;
-    const grandRate = grand.totalPoints / grand.basePoints;
-    expect(grandRate).toBeGreaterThan(bonusRate);
+  it('5文字以上はボーナス、7文字以上は大ボーナスのタグが付く', () => {
+    expect(scoreWord('ひまわり').bonusTier).toBe('none'); // 4文字
+    expect(scoreWord('あいうえお').bonusTier).toBe('bonus'); // 5文字
+    expect(scoreWord('あいうえおかき').bonusTier).toBe('grand-bonus'); // 7文字
+  });
+
+  it('連続記録が0ならダウンコンボはかからない', () => {
+    const result = scoreWord('ねこ', 0);
+    expect(result.comboMultiplier).toBe(1);
+    expect(result.totalPoints).toBe(result.basePoints);
+  });
+
+  it('短い単語(2〜3文字)を連発すると得点が減衰する', () => {
+    const first = scoreWord('ねこ', 0);
+    const second = scoreWord('いぬ', 1);
+    const third = scoreWord('うし', 2);
+    expect(second.totalPoints).toBeLessThan(first.totalPoints);
+    expect(third.totalPoints).toBeLessThan(second.totalPoints);
+  });
+
+  it('ダウンコンボの減衰には下限がある', () => {
+    const result = scoreWord('ねこ', 20);
+    expect(result.comboMultiplier).toBe(0.25);
+  });
+
+  it('4文字以上の単語にはダウンコンボがかからない(連続していても等倍)', () => {
+    const result = scoreWord('ひまわり', 5);
+    expect(result.comboMultiplier).toBe(1);
+    expect(result.totalPoints).toBe(result.basePoints);
+  });
+});
+
+describe('countTrailingShortStreak', () => {
+  it('末尾から短い単語(2〜3文字)が何連続続いているかを数える', () => {
+    expect(countTrailingShortStreak([])).toBe(0);
+    expect(countTrailingShortStreak([{ length: 2 }, { length: 3 }])).toBe(2);
+  });
+
+  it('4文字以上の単語を挟むとリセットされる', () => {
+    const words = [{ length: 2 }, { length: 2 }, { length: 4 }, { length: 3 }];
+    expect(countTrailingShortStreak(words)).toBe(1);
   });
 });
 

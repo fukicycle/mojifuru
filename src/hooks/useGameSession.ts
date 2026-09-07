@@ -12,7 +12,7 @@ import { summarizeScore, type ScoreSummary, type ScoredWord } from '../game/scor
 
 export interface WordFeedback {
   word: string;
-  status: ValidationStatus;
+  status: ValidationStatus | 'taken';
   points?: number;
 }
 
@@ -106,7 +106,13 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
 
       if (claimLetter) {
         claimLetter(letterId).then((ok) => {
-          if (ok) applyLocally();
+          if (ok) {
+            applyLocally();
+          } else {
+            // 対戦相手が先にこの文字を取得済み。タップが無反応に見えないよう、
+            // 取れなかったことを明示的にフィードバックする。
+            setFeedback({ word: char, status: 'taken' });
+          }
         });
       } else {
         applyLocally();
@@ -119,7 +125,7 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
 
   const confirmWord = useCallback(() => {
     if (!dawg || finishedRef.current || currentWord.length === 0) return;
-    const result = validateWord(dawg, currentWord);
+    const result = validateWord(dawg, currentWord, scoredWordsRef.current);
     if (result.status === 'valid' && result.scored) {
       setScoredWords((words) => [...words, result.scored!]);
       setFeedback({ word: currentWord, status: 'valid', points: result.scored.totalPoints });

@@ -246,7 +246,61 @@ button {
   color: var(--color-magenta-strong);
 }
 
+.player-avatars {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+}
+
+.player-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.player-avatar--self {
+  outline: 2px solid var(--text-h);
+  outline-offset: 2px;
+}
+
+.player-avatar-score {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  min-width: 16px;
+  background: white;
+  color: var(--text-h);
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 0 4px;
+  line-height: 14px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.player-avatar--magenta {
+  background: var(--color-magenta);
+}
+.player-avatar--orange {
+  background: var(--color-orange);
+}
+.player-avatar--aqua {
+  background: var(--color-aqua);
+}
+
 .falling-field {
+  --combo-decay: 0;
   position: relative;
   flex: 1;
   min-height: 320px;
@@ -254,6 +308,53 @@ button {
   border-radius: 20px;
   overflow: hidden;
   border: 2px solid var(--border);
+}
+
+/*
+ * 短い単語(2〜3文字)の連発による得点ダウンを、テキストやバッジではなく
+ * プレイ面そのものの背景色でじわっと知らせる。フォアグラウンドの操作(文字タップ)
+ * を邪魔しないよう、pointer-events: noneかつ落下中の文字より背面(DOM順で先)に置く。
+ */
+.falling-field::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 140, 0, calc(var(--combo-decay) * 0.32)),
+    rgba(255, 140, 0, calc(var(--combo-decay) * 0.12))
+  );
+  transition: background 0.4s ease;
+}
+
+.field-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 28px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
+  transition: opacity 0.3s ease;
+}
+
+.field-status--valid {
+  opacity: 0.55;
+  color: #1c7a4d;
+}
+.field-status--unregistered {
+  opacity: 0.55;
+  color: #8a6d00;
+}
+.field-status--empty {
+  opacity: 0;
 }
 
 /*
@@ -345,27 +446,6 @@ button {
 .word-controls .button--clear-all {
   padding: 8px 20px;
   font-size: 13px;
-}
-
-.feedback-toast {
-  text-align: center;
-  font-size: 14px;
-  font-weight: 700;
-  border-radius: 12px;
-  padding: 6px 12px;
-  min-height: 1.2em;
-}
-
-.feedback-toast--valid {
-  color: #1c7a4d;
-  background: #e6f7ee;
-}
-.feedback-toast--unregistered {
-  color: #8a6d00;
-  background: #fff6da;
-}
-.feedback-toast--empty {
-  visibility: hidden;
 }
 
 .score-strip {

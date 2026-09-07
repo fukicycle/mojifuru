@@ -16,7 +16,8 @@ export const MAX_SCORE_INCREMENT_PER_WORD = 200;
 export interface RoomPlayer {
   name: string;
   score: number;
-  wordsFormed: string[];
+  /** RTDBは空配列を保持しないため、単語未成立の間はフィールド自体が存在しない */
+  wordsFormed?: string[];
 }
 
 export interface Room {
@@ -96,8 +97,8 @@ export async function submitRoomWord(roomId: string, uid: string, word: string, 
     const base: RoomPlayer = current ?? { name: '', score: 0, wordsFormed: [] };
     return {
       ...base,
-      score: base.score + Math.min(points, MAX_SCORE_INCREMENT_PER_WORD),
-      wordsFormed: [...base.wordsFormed, word],
+      score: (base.score ?? 0) + Math.min(points, MAX_SCORE_INCREMENT_PER_WORD),
+      wordsFormed: [...(base.wordsFormed ?? []), word],
     };
   });
 }
