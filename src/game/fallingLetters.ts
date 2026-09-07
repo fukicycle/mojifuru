@@ -11,6 +11,12 @@
  */
 
 export const FALL_DURATION_MS = 6500;
+/**
+ * FALL_DURATION_MS到達(進捗100%)後も、実際に画面外へ完全に抜けきるまで
+ * 少し猶予を持たせるための追加時間。これがないと、チップがまだ枠内に
+ * 見えている途中で突然消える(先に state から除去されてしまう)ことになる。
+ */
+export const FALL_EXIT_BUFFER_MS = 900;
 export const SPAWN_INTERVAL_MS = 650;
 
 export interface FallingLetter {
@@ -99,7 +105,7 @@ export function advanceFallingLetters(
   const weights = options.weights ?? DEFAULT_KANA_WEIGHTS;
   const maxSpawns = options.maxSpawnsPerAdvance ?? 10_000;
 
-  const letters = state.letters.filter((l) => elapsedMs - l.spawnedAt < FALL_DURATION_MS);
+  const letters = state.letters.filter((l) => elapsedMs - l.spawnedAt < FALL_DURATION_MS + FALL_EXIT_BUFFER_MS);
   let { lastSpawnedAt, nextId } = state;
 
   const spawned: FallingLetter[] = [];
@@ -122,9 +128,15 @@ export function advanceFallingLetters(
   };
 }
 
-/** 0(出現直後)〜1(画面下端到達)の降下進捗 */
+/**
+ * 0(出現直後)〜1(画面下端到達)の降下進捗。
+ * 1を超えて FALL_EXIT_BUFFER_MS 分だけ進み続けることで、
+ * 見た目上チップが完全に画面外へ抜けきってから state から除去されるようにする
+ * (`.falling-field` の overflow:hidden により、100%を超えた位置は自動的に隠れる)。
+ */
 export function fallingProgress(letter: FallingLetter, elapsedMs: number): number {
-  return Math.min(1, Math.max(0, (elapsedMs - letter.spawnedAt) / FALL_DURATION_MS));
+  const maxProgress = (FALL_DURATION_MS + FALL_EXIT_BUFFER_MS) / FALL_DURATION_MS;
+  return Math.min(maxProgress, Math.max(0, (elapsedMs - letter.spawnedAt) / FALL_DURATION_MS));
 }
 
 export function removeLetterById(state: FallingLettersState, id: string): FallingLettersState {

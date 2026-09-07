@@ -32,7 +32,7 @@ export default function RoomResultScreen() {
   return (
     <div className="screen">
       <h2 style={{ textAlign: 'center' }}>けっか発表</h2>
-      <div className="player-list">
+      <div className="player-list" style={{ flex: 1, overflowY: 'auto' }}>
         {ranked.map(([uid, player], i) => (
           <div className="leaderboard-row" key={uid}>
             <div className="leaderboard-rank">{i + 1}</div>

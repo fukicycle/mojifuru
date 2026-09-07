@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   FALL_DURATION_MS,
+  FALL_EXIT_BUFFER_MS,
   SPAWN_INTERVAL_MS,
   advanceFallingLetters,
   createInitialFallingLettersState,
@@ -66,13 +67,16 @@ describe('advanceFallingLetters', () => {
     expect(runOnce()).toEqual(runOnce());
   });
 
-  it('FALL_DURATION_MSを超えた文字は取りこぼしとして除去される', () => {
+  it('FALL_DURATION_MS + FALL_EXIT_BUFFER_MSを超えた文字は取りこぼしとして除去される', () => {
     const rng = createRng(1);
     let state = createInitialFallingLettersState();
     state = advanceFallingLetters(state, SPAWN_INTERVAL_MS, rng);
     expect(state.letters.length).toBe(1);
+    // バッファ時間内はまだ画面外へ抜けきっていないので残っている
     state = advanceFallingLetters(state, SPAWN_INTERVAL_MS + FALL_DURATION_MS + 1, rng);
-    expect(state.letters.some((l) => l.id === state.letters[0]?.id && l.spawnedAt === SPAWN_INTERVAL_MS)).toBe(false);
+    expect(state.letters.some((l) => l.spawnedAt === SPAWN_INTERVAL_MS)).toBe(true);
+    state = advanceFallingLetters(state, SPAWN_INTERVAL_MS + FALL_DURATION_MS + FALL_EXIT_BUFFER_MS + 1, rng);
+    expect(state.letters.some((l) => l.spawnedAt === SPAWN_INTERVAL_MS)).toBe(false);
   });
 
   it('複数回に分けて呼んでも一度に呼んだ場合と同じ本数が出現する(フレームレート非依存)', () => {
@@ -94,11 +98,13 @@ describe('advanceFallingLetters', () => {
 });
 
 describe('fallingProgress', () => {
-  it('出現直後は0、消滅時点で1になる', () => {
+  it('出現直後は0、画面下端到達時点で1、その後バッファ分だけ進んでからクランプされる', () => {
     const letter = { id: 'l0', char: 'あ', x: 0.5, spawnedAt: 1000 };
+    const maxProgress = (FALL_DURATION_MS + FALL_EXIT_BUFFER_MS) / FALL_DURATION_MS;
     expect(fallingProgress(letter, 1000)).toBe(0);
     expect(fallingProgress(letter, 1000 + FALL_DURATION_MS)).toBe(1);
-    expect(fallingProgress(letter, 1000 + FALL_DURATION_MS * 2)).toBe(1); // clamp
+    expect(fallingProgress(letter, 1000 + FALL_DURATION_MS + FALL_EXIT_BUFFER_MS)).toBeCloseTo(maxProgress);
+    expect(fallingProgress(letter, 1000 + FALL_DURATION_MS * 2)).toBeCloseTo(maxProgress); // clamp
   });
 });
 

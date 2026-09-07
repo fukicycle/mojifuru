@@ -45,7 +45,6 @@ export interface GameSession {
   collectLetter: (letterId: string, char: string) => void;
   confirmWord: () => void;
   clearWord: () => void;
-  backspace: () => void;
 }
 
 export function useGameSession(options: UseGameSessionOptions): GameSession {
@@ -117,7 +116,6 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
   );
 
   const clearWord = useCallback(() => setCurrentWord(''), []);
-  const backspace = useCallback(() => setCurrentWord((w) => w.slice(0, -1)), []);
 
   const confirmWord = useCallback(() => {
     if (!dawg || finishedRef.current || currentWord.length === 0) return;
@@ -147,8 +145,7 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       collectLetter,
       confirmWord,
       clearWord,
-      backspace,
     }),
-    [remainingSeconds, elapsedMs, fallingState.letters, currentWord, scoredWords, feedback, isFinished, collectLetter, confirmWord, clearWord, backspace],
+    [remainingSeconds, elapsedMs, fallingState.letters, currentWord, scoredWords, feedback, isFinished, collectLetter, confirmWord, clearWord],
   );
 }

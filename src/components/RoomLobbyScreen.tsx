@@ -54,7 +54,7 @@ export default function RoomLobbyScreen() {
         {copied ? 'コピーしました!' : 'ルームコードをコピー'}
       </button>
 
-      <div className="player-list" style={{ marginTop: 16 }}>
+      <div className="player-list" style={{ marginTop: 16, maxHeight: '40vh', overflowY: 'auto', width: '100%' }}>
         {players.map(([uid, player]) => (
           <div className="player-list-row" key={uid}>
             <span>{player.name || 'ななしさん'}</span>

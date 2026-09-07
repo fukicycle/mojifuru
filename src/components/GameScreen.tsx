@@ -131,11 +131,16 @@ export default function GameScreen({ mode }: GameScreenProps) {
           return (
             <button
               key={letter.id}
-              className={`letter-chip letter-chip--${colorForChar(letter.char)}`}
+              className="letter-chip-hit"
               style={{ left: `${letter.x * 100}%`, top: `${progress * 92 + 4}%` }}
-              onClick={() => session.collectLetter(letter.id, letter.char)}
+              onPointerDown={(e) => {
+                // 移動中の的をタップする都合上、touchend/clickではなく
+                // 指が触れた瞬間(pointerdown)で即座に取得判定する。
+                e.preventDefault();
+                session.collectLetter(letter.id, letter.char);
+              }}
             >
-              {letter.char}
+              <span className={`letter-chip letter-chip--${colorForChar(letter.char)}`}>{letter.char}</span>
             </button>
           );
         })}
@@ -158,11 +163,11 @@ export default function GameScreen({ mode }: GameScreenProps) {
       </div>
 
       <div className="word-controls">
-        <button className="button button--ghost" onClick={session.backspace} disabled={!session.currentWord}>
-          1文字もどす
-        </button>
-        <button className="button button--primary" style={{ flex: 1 }} disabled={!canConfirm} onClick={session.confirmWord}>
+        <button className="button button--primary button--confirm" disabled={!canConfirm} onClick={session.confirmWord}>
           この単語で確定
+        </button>
+        <button className="button button--ghost button--clear-all" onClick={session.clearWord} disabled={!session.currentWord}>
+          ぜんぶクリア
         </button>
       </div>
 

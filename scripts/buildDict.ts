@@ -7,7 +7,8 @@
  *
  * データソース(scripts/fetchDictSources.ts で事前取得, scripts/.cache/):
  *   - Mozc辞書(BSDライセンス): 読み・品詞IDつきの語彙が入った dictionary00〜09.txt と
- *     品詞IDの意味表を持つ id.def。ここから一般名詞・形容詞・動詞(基本形)のみを抽出する。
+ *     品詞IDの意味表を持つ id.def。ここから名詞(一般・サ変接続・形容動詞語幹・副詞可能)・
+ *     形容詞・動詞(いずれも基本形)のみを抽出する。
  *   - JMdict(CC BY-SA, jmdict-simplified 経由): 抽出した語のクロスチェックに使う。
  *     Mozc辞書は「名詞,一般」に固有名詞・ブランド名・キャラクター名なども
  *     数多く含んでいるため、JMdict(固有名詞を含まない一般語彙辞典)に
@@ -30,12 +31,18 @@ const KANA_ONLY = new RegExp(`^[ぁ-ゖ]{${MIN_LEN},${MAX_LEN}}$`);
 /**
  * Mozc の id.def から、採用したい品詞に該当する品詞IDの集合を作る。
  *   - 名詞,一般                          … 一般名詞
+ *   - 名詞,サ変接続                      … 「する」を伴い動詞として使える名詞(例: 勉強, 運動)
+ *   - 名詞,形容動詞語幹                  … な形容詞の語幹(例: きれい, しずか)
+ *   - 名詞,副詞可能                      … 副詞的にも使える名詞(例: 今日, 少し)
  *   - 形容詞,自立,...,基本形|口語基本形   … 形容詞の言い切りの形(活用前の基本形のみ)
  *   - 動詞,自立,...,基本形                … 動詞の言い切りの形(活用前の基本形のみ)
- * 固有名詞・接尾辞・助動詞・文語形などはここに含めないことで除外する。
+ * 固有名詞・数詞・代名詞・接尾辞・助動詞・文語形などはここに含めないことで除外する
+ * (収録語数を増やす際も「一般名詞・形容詞・動詞」という抽出方針自体は変えず、
+ *  名詞のサブカテゴリを広げるにとどめている)。
  */
 function parseAllowedPosIds(idDefText: string): Set<number> {
   const allowed = new Set<number>();
+  const GENERAL_NOUN_POS2 = new Set(['一般', 'サ変接続', '形容動詞語幹', '副詞可能']);
   for (const line of idDefText.split('\n')) {
     if (!line.trim()) continue;
     const spaceIdx = line.indexOf(' ');
@@ -44,7 +51,7 @@ function parseAllowedPosIds(idDefText: string): Set<number> {
     const fields = line.slice(spaceIdx + 1).split(',');
     const [pos1, pos2, , , , conjugationForm] = fields;
 
-    const isGeneralNoun = pos1 === '名詞' && pos2 === '一般';
+    const isGeneralNoun = pos1 === '名詞' && GENERAL_NOUN_POS2.has(pos2);
     const isAdjectiveBase =
       pos1 === '形容詞' && pos2 === '自立' && (conjugationForm === '基本形' || conjugationForm === '口語基本形');
     const isVerbBase = pos1 === '動詞' && pos2 === '自立' && conjugationForm === '基本形';

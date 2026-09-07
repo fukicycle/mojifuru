@@ -17,6 +17,8 @@
   --shadow-soft: 0 6px 16px rgba(180, 120, 90, 0.12);
 
   --canvas-max-width: 420px;
+  /* PCの縦長ウィンドウでも有利にならないよう、横幅と同様に縦幅も上限を設ける */
+  --canvas-max-height: 900px;
 
   color-scheme: light;
   color: var(--text);
@@ -32,16 +34,32 @@
   box-sizing: border-box;
 }
 
+/*
+ * ゲームプレイ中に画面全体がスクロール/バウンスしてしまうと操作の致命的な妨げになるため、
+ * ページ全体のスクロールを禁止し、アプリを常に画面内に固定する。
+ * スクロールが必要な要素(単語一覧・ランキングなど)はそれぞれの内側のコンテナだけで
+ * overflow-y: auto を持たせ、そこだけがスクロールするようにする。
+ */
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
-  min-height: 100svh;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: var(--bg);
 }
 
 #root {
-  min-height: 100svh;
+  height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 h1,
@@ -63,24 +81,21 @@ button {
 /* モバイルファースト・ゲームキャンバス最大幅420px固定。
    PCでは左右をレターボックスして、大画面ほど有利にならないようにする。 */
 .app-shell {
-  flex: 1;
   width: 100%;
   max-width: var(--canvas-max-width);
-  margin: 0 auto;
+  height: 100%;
+  max-height: var(--canvas-max-height);
   background: var(--bg-panel);
-  min-height: 100svh;
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: hidden;
   box-shadow: var(--shadow-soft);
 }
 
 @media (min-width: 480px) {
   .app-shell {
-    min-height: 90svh;
-    margin: 16px auto;
     border-radius: 24px;
-    overflow: hidden;
   }
 }
 
@@ -90,6 +105,8 @@ button {
   flex-direction: column;
   padding: 20px 16px;
   gap: 16px;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .screen--center {
@@ -239,9 +256,28 @@ button {
   border: 2px solid var(--border);
 }
 
-.letter-chip {
+/*
+ * 降ってくる文字のタップ判定は見た目の円(44px)より一回り大きい当たり判定(64px)を
+ * 別要素(.letter-chip-hit)として持たせる。指の下に見えている円がわずかでも
+ * ズレるだけで取得できない、という取りこぼしストレスを軽減するため。
+ */
+.letter-chip-hit {
   position: absolute;
   transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.letter-chip {
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -252,9 +288,8 @@ button {
   font-size: 20px;
   font-weight: 700;
   color: white;
-  cursor: pointer;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-  touch-action: manipulation;
+  pointer-events: none;
 }
 
 .letter-chip--magenta {
@@ -296,12 +331,20 @@ button {
 
 .word-controls {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 
-.word-controls .button {
-  padding: 10px 16px;
-  font-size: 14px;
+.word-controls .button--confirm {
+  width: 100%;
+  padding: 18px 16px;
+  font-size: 20px;
+}
+
+.word-controls .button--clear-all {
+  padding: 8px 20px;
+  font-size: 13px;
 }
 
 .feedback-toast {

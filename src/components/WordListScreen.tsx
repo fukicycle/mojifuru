@@ -34,13 +34,18 @@ export default function WordListScreen() {
   const [containerHeight, setContainerHeight] = useState(400);
 
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}wordlist.json`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`${res.status}`);
-        return res.json();
-      })
-      .then((data: WordEntry[]) => setWords(data))
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+    const worker = new Worker(new URL('../workers/wordlistWorker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = (e: MessageEvent<{ ok: true; data: WordEntry[] } | { ok: false; error: string }>) => {
+      if (e.data.ok) setWords(e.data.data);
+      else setError(e.data.error);
+      worker.terminate();
+    };
+    worker.onerror = () => {
+      setError('読み込み中にエラーが発生しました');
+      worker.terminate();
+    };
+    worker.postMessage(`${import.meta.env.BASE_URL}wordlist.json`);
+    return () => worker.terminate();
   }, []);
 
   useEffect(() => {
@@ -100,7 +105,7 @@ export default function WordListScreen() {
       </div>
 
       {error && <p style={{ color: 'crimson' }}>読み込みに失敗しました: {error}</p>}
-      {!error && !words && <p>読み込み中...(約{'2万'}語)</p>}
+      {!error && !words && <p>読み込み中...(約{'6.5万'}語)</p>}
 
       {words && (
         <>
