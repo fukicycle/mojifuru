@@ -289,30 +289,41 @@ button {
 
 /* ===== ゲーム画面 ===== */
 
-.game-header {
+/*
+ * 得点(最重要)・タイマー・ボーナス案内は、以前はheader/stat-barの2段に分かれて
+ * 縦スペースを圧迫していた。「見たいのは点数・つぎの文字・収集した文字」という
+ * 方針に合わせ、タイマーとボーナス案内は補助情報として1段のHUDバーに統合し、
+ * プレイ面(falling-field)に割ける高さを増やす。
+ */
+.hud-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
 
 .bonus-badge {
   flex: 1;
+  min-width: 0;
   background: linear-gradient(135deg, var(--color-amber), var(--color-amber-strong));
   color: #5a3d00;
-  border-radius: 14px;
-  padding: 8px 12px;
-  font-size: 12px;
+  border-radius: 12px;
+  padding: 6px 10px;
+  font-size: 10px;
   font-weight: 700;
   text-align: center;
   box-shadow: var(--shadow-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .timer {
-  font-size: 22px;
+  flex-shrink: 0;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-h);
-  min-width: 3.5em;
+  min-width: 3em;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -327,14 +338,8 @@ button {
  * HUD配置)。加点のたびにvalueをkeyごと再マウントしてポップ演出を再生させ、
  * 変化そのものにも気付けるようにする。
  */
-.stat-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
 .score-display {
+  flex-shrink: 0;
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -355,6 +360,12 @@ button {
   animation: score-pop 0.35s ease-out;
 }
 
+.score-display-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
 @keyframes score-pop {
   0% {
     transform: scale(1.4);
@@ -371,6 +382,7 @@ button {
  * 奥ほど小さく・薄くすることで、Tetrisのネクスト表示のような遠近感を出す。
  */
 .next-letters-preview {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -419,26 +431,41 @@ button {
   opacity: 0.55;
 }
 
+/*
+ * 対戦相手の情報は「見たいのは点数・つぎの文字・収集した文字」という方針における
+ * 補助情報。以前は専用の行として縦スペースを消費し、かつ人数が増えると
+ * flexboxの縮小によって円が潰れて表示しきれなくなっていた。
+ * プレイ面(falling-field)の角にオーバーレイとして重ね、独立したスクロール領域
+ * (flex-shrink: 0の円+overflow-x auto)にすることで、他の行を圧迫せず、
+ * 人数が増えても個々のアバターが潰れないようにする。
+ */
 .player-avatars {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  left: 8px;
+  z-index: 2;
   display: flex;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 5px;
   overflow-x: auto;
-  padding: 2px 2px 6px;
+  pointer-events: none;
 }
 
 .player-avatar {
   position: relative;
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  pointer-events: auto;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
 .player-avatar--self {
@@ -686,6 +713,7 @@ button {
 }
 
 .current-word-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -744,6 +772,7 @@ button {
 }
 
 .word-controls {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -759,18 +788,6 @@ button {
 .word-controls .button--clear-all {
   padding: 8px 20px;
   font-size: 13px;
-}
-
-.score-strip {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: var(--text-soft);
-}
-
-.score-strip strong {
-  color: var(--text-h);
 }
 
 /* ===== 結果画面 ===== */

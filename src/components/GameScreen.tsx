@@ -43,7 +43,7 @@ interface GameScreenProps {
 export default function GameScreen({ mode }: GameScreenProps) {
   const navigate = useNavigate();
   const { roomId } = useParams();
-  const { dawg, dawgError, setLastResult, playerName, firebaseEnabled, setIsPlaying } = useGameContext();
+  const { dawg, dawgError, setLastResult, firebaseEnabled, setIsPlaying } = useGameContext();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -205,17 +205,15 @@ export default function GameScreen({ mode }: GameScreenProps) {
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <div className="bonus-badge">5文字でボーナス!7文字で大ボーナス!!</div>
-      </div>
-
-      <div className="stat-bar">
+      <div className="hud-bar">
         <div className="score-display">
           <span className="score-display-label">とくてん</span>
           <span key={totalScore} className="score-display-value">
             {totalScore}
           </span>
+          <span className="score-display-count">{session.scoredWords.length}語</span>
         </div>
+        <div className="bonus-badge">5字でボーナス・7字で大ボーナス</div>
         <div className={`timer ${session.remainingSeconds <= 10 ? 'timer--urgent' : ''}`}>
           {session.remainingSeconds}秒
         </div>
@@ -235,32 +233,31 @@ export default function GameScreen({ mode }: GameScreenProps) {
         </div>
       </div>
 
-      {mode === 'room' && players.length > 0 && (
-        <div className="player-avatars">
-          {players.map(([uid, player]) => {
-            const initial = (player.name || 'ゲ')[0];
-            return (
-              <div
-                key={uid}
-                className={`player-avatar player-avatar--${colorForChar(initial)} ${
-                  uid === uidRef.current ? 'player-avatar--self' : ''
-                }`}
-                title={player.name || 'ななしさん'}
-              >
-                <span>{initial}</span>
-                <span className="player-avatar-score">{player.score}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       <div
         className="falling-field"
         style={{ '--combo-decay': comboDecay } as CSSProperties}
         ref={fallingFieldRef}
         onPointerDown={handleFieldPointerDown}
       >
+        {mode === 'room' && players.length > 0 && (
+          <div className="player-avatars">
+            {players.map(([uid, player]) => {
+              const initial = (player.name || 'ゲ')[0];
+              return (
+                <div
+                  key={uid}
+                  className={`player-avatar player-avatar--${colorForChar(initial)} ${
+                    uid === uidRef.current ? 'player-avatar--self' : ''
+                  }`}
+                  title={player.name || 'ななしさん'}
+                >
+                  <span>{initial}</span>
+                  <span className="player-avatar-score">{player.score}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
         {session.feedback && (
           <div
             key={feedbackKey}
@@ -326,13 +323,6 @@ export default function GameScreen({ mode }: GameScreenProps) {
         >
           ぜんぶクリア
         </button>
-      </div>
-
-      <div className="score-strip">
-        <span>
-          成立: <strong>{session.scoredWords.length}</strong>語
-        </span>
-        {playerName && <span>プレイヤー: {playerName}</span>}
       </div>
     </div>
   );
