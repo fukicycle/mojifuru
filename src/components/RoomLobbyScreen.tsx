@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { startRoom, subscribeRoom, type Room } from '../firebase/room';
+import { resetOwnRoundState, startRoom, subscribeRoom, type Room } from '../firebase/room';
 import { useGameContext } from '../context/GameContext';
+import { signInAnonymouslyOnce } from '../firebase/config';
 
 export default function RoomLobbyScreen() {
   const { roomId } = useParams();
@@ -9,6 +10,12 @@ export default function RoomLobbyScreen() {
   const { firebaseEnabled } = useGameContext();
   const [room, setRoom] = useState<Room | null>(null);
   const [copied, setCopied] = useState(false);
+  const [uid, setUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!firebaseEnabled) return;
+    signInAnonymouslyOnce().then(setUid);
+  }, [firebaseEnabled]);
 
   useEffect(() => {
     if (!roomId || !firebaseEnabled) return;
@@ -20,6 +27,15 @@ export default function RoomLobbyScreen() {
       navigate(`/room/${roomId}/play`);
     }
   }, [room, roomId, navigate]);
+
+  // 再戦でロビーへ戻ってきた場合、前回ラウンドの自分のスコア・成立単語をリセットする
+  useEffect(() => {
+    if (!roomId || !uid || !room || room.startAt !== null) return;
+    const me = room.players?.[uid];
+    if (me && ((me.score ?? 0) > 0 || (me.wordsFormed?.length ?? 0) > 0)) {
+      void resetOwnRoundState(roomId, uid);
+    }
+  }, [room, roomId, uid]);
 
   if (!roomId) return null;
 

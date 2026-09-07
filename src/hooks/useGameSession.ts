@@ -52,7 +52,9 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
   const durationMs = durationSec * 1000;
 
   const rngRef = useRef(createRng(seed ?? Math.floor(Math.random() * 2 ** 31)));
-  const [fallingState, setFallingState] = useState(createInitialFallingLettersState);
+  const [fallingState, setFallingState] = useState(() =>
+    createInitialFallingLettersState(startAtEpochMs !== undefined ? `t${startAtEpochMs}-` : ''),
+  );
   const [elapsedMs, setElapsedMs] = useState(0);
   const [currentWord, setCurrentWord] = useState('');
   const [scoredWords, setScoredWords] = useState<ScoredWord[]>([]);

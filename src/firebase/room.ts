@@ -67,6 +67,24 @@ export async function startRoom(roomId: string): Promise<void> {
   await update(ref(db, `rooms/${roomId}`), { startAt: serverTimestamp() });
 }
 
+/**
+ * 同じルームでもう一度遊べるようにロビーへ戻す。
+ * startAtをnullに戻すことで、全員のロビー画面(startAt !== nullで
+ * プレイ画面へ遷移する仕組み)を巻き戻し、seedを新しくして
+ * 降ってくる文字のパターンも次回戦は変える。
+ */
+export async function restartRoom(roomId: string): Promise<void> {
+  const db = getFirebaseDb();
+  const seed = Math.floor(Math.random() * 2 ** 31);
+  await update(ref(db, `rooms/${roomId}`), { startAt: null, seed });
+}
+
+/** ロビーに戻った際、前回ラウンドの自分のスコア・成立単語をリセットする */
+export async function resetOwnRoundState(roomId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  await update(ref(db, `rooms/${roomId}/players/${uid}`), { score: 0, wordsFormed: null });
+}
+
 export function subscribeRoom(roomId: string, onChange: (room: Room | null) => void): () => void {
   const db = getFirebaseDb();
   return onValue(ref(db, `rooms/${roomId}`), (snapshot) => {

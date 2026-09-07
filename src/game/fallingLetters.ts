@@ -32,10 +32,16 @@ export interface FallingLettersState {
   letters: FallingLetter[];
   lastSpawnedAt: number;
   nextId: number;
+  /**
+   * 生成するidの接頭辞。対戦モードで同じルームを再戦する際、
+   * ラウンドごとに異なる接頭辞を渡すことで、前回ラウンドの
+   * `takenLetters`(既に取得済みの文字)と今回のidが衝突しないようにする。
+   */
+  idPrefix: string;
 }
 
-export function createInitialFallingLettersState(): FallingLettersState {
-  return { letters: [], lastSpawnedAt: 0, nextId: 0 };
+export function createInitialFallingLettersState(idPrefix = ''): FallingLettersState {
+  return { letters: [], lastSpawnedAt: 0, nextId: 0, idPrefix };
 }
 
 /** mulberry32: シンプルで高速な決定的擬似乱数生成器 */
@@ -113,7 +119,7 @@ export function advanceFallingLetters(
   while (lastSpawnedAt + SPAWN_INTERVAL_MS <= elapsedMs && guard < maxSpawns) {
     lastSpawnedAt += SPAWN_INTERVAL_MS;
     spawned.push({
-      id: `l${nextId++}`,
+      id: `${state.idPrefix}l${nextId++}`,
       char: pickWeightedChar(rng, weights),
       x: rng(),
       spawnedAt: lastSpawnedAt,
@@ -125,6 +131,7 @@ export function advanceFallingLetters(
     letters: spawned.length === 0 ? letters : [...letters, ...spawned],
     lastSpawnedAt,
     nextId,
+    idPrefix: state.idPrefix,
   };
 }
 

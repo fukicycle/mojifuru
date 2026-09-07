@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { subscribeRoom, type Room } from '../firebase/room';
+import { restartRoom, subscribeRoom, type Room } from '../firebase/room';
 import { useGameContext } from '../context/GameContext';
 
 export default function RoomResultScreen() {
@@ -8,13 +8,31 @@ export default function RoomResultScreen() {
   const navigate = useNavigate();
   const { firebaseEnabled } = useGameContext();
   const [room, setRoom] = useState<Room | null>(null);
+  const [restarting, setRestarting] = useState(false);
 
   useEffect(() => {
     if (!roomId || !firebaseEnabled) return;
     return subscribeRoom(roomId, setRoom);
   }, [roomId, firebaseEnabled]);
 
+  // 誰か1人が「もう一度あそぶ」を押してstartAtがリセットされたら、
+  // 全員のこの画面をロビーへ連れ戻す。
+  useEffect(() => {
+    if (roomId && room && room.startAt === null) {
+      navigate(`/room/${roomId}`);
+    }
+  }, [room, roomId, navigate]);
+
   if (!roomId) return null;
+
+  async function handleRematch() {
+    setRestarting(true);
+    try {
+      await restartRoom(roomId!);
+    } finally {
+      setRestarting(false);
+    }
+  }
 
   if (!firebaseEnabled) {
     return (
@@ -43,7 +61,7 @@ export default function RoomResultScreen() {
       </div>
 
       <div className="button-row" style={{ margin: '16px auto 0' }}>
-        <button className="button button--primary button--block" onClick={() => navigate(`/room/${roomId}`)}>
+        <button className="button button--primary button--block" onClick={handleRematch} disabled={restarting}>
           もう一度あそぶ
         </button>
         <button className="button button--ghost button--block" onClick={() => navigate('/')}>
