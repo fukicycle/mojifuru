@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
-import { useGameSession } from '../hooks/useGameSession';
+import { useGameSession, type WordFeedback } from '../hooks/useGameSession';
 import { fallingProgress, type FallingLetter } from '../game/fallingLetters';
 import { MIN_WORD_LENGTH } from '../game/wordValidator';
-import { currentComboMultiplier, type ScoreSummary } from '../game/scoring';
+import {
+  bonusTierForLength,
+  currentComboMultiplier,
+  BONUS_MIN_LENGTH,
+  GRAND_BONUS_MIN_LENGTH,
+  type BonusTier,
+  type ScoreSummary,
+} from '../game/scoring';
 import { reportUnregisteredWord } from '../firebase/wordCandidates';
 import { claimLetter as claimLetterInRoom, subscribeRoom, submitRoomWord, type Room } from '../firebase/room';
 import { signInAnonymouslyOnce } from '../firebase/config';
@@ -15,6 +22,18 @@ function colorForChar(char: string): (typeof CHIP_COLORS)[number] {
   let hash = 0;
   for (let i = 0; i < char.length; i++) hash = (hash * 31 + char.charCodeAt(i)) >>> 0;
   return CHIP_COLORS[hash % CHIP_COLORS.length];
+}
+
+/**
+ * 収集中の単語欄の色調。文字数が増えるほど、ボーナス成立(5文字)・大ボーナス成立(7文字)の
+ * 配色に近づけていくことで、「あと何文字でボーナスか」を欄の色だけでも直感的に伝える。
+ */
+function wordHeatClass(length: number): 'empty' | 'cool' | 'warm' | BonusTier {
+  if (length === 0) return 'empty';
+  if (length >= GRAND_BONUS_MIN_LENGTH) return 'grand-bonus';
+  if (length >= BONUS_MIN_LENGTH) return 'bonus';
+  if (length >= 4) return 'warm';
+  return 'cool';
 }
 
 interface GameScreenProps {
@@ -99,6 +118,16 @@ export default function GameScreen({ mode }: GameScreenProps) {
     onFinish: handleFinish,
   });
 
+  // session.feedbackは確定のたびに新しいオブジェクトになる。これを検知してkeyを
+  // 更新することで、同じ単語が連続してもポップアップが毎回再マウント→アニメーション
+  // 再生されるようにする(レンダー中にrefと比較して更新する公式パターン)。
+  const prevFeedbackRef = useRef<typeof session.feedback>(null);
+  const [feedbackKey, setFeedbackKey] = useState(0);
+  if (session.feedback && session.feedback !== prevFeedbackRef.current) {
+    prevFeedbackRef.current = session.feedback;
+    setFeedbackKey((k) => k + 1);
+  }
+
   const takenLetters = mode === 'room' ? room?.takenLetters : undefined;
   const visibleFallingLetters =
     mode === 'room' && takenLetters
@@ -182,6 +211,20 @@ export default function GameScreen({ mode }: GameScreenProps) {
         </div>
       </div>
 
+      <div className="next-letters-preview">
+        <span className="next-letters-label">つぎ</span>
+        <div className="next-letters-chips">
+          {session.upcomingChars.map((ch, i) => (
+            <span
+              key={i}
+              className={`letter-chip letter-chip--${colorForChar(ch)} next-letters-chip next-letters-chip--${i}`}
+            >
+              {ch}
+            </span>
+          ))}
+        </div>
+      </div>
+
       {mode === 'room' && players.length > 0 && (
         <div className="player-avatars">
           {players.map(([uid, player]) => {
@@ -208,9 +251,20 @@ export default function GameScreen({ mode }: GameScreenProps) {
         ref={fallingFieldRef}
         onPointerDown={handleFieldPointerDown}
       >
-        <div className={`field-status field-status--${feedbackClass(session.feedback)}`}>
-          {feedbackMessage(session.feedback)}
-        </div>
+        {session.feedback && (
+          <div
+            key={feedbackKey}
+            className={`field-status field-status--${feedbackClass(session.feedback)} field-status--tier-${feedbackTier(session.feedback)}`}
+            style={{ '--pop-scale': feedbackPopScale(session.feedback) } as CSSProperties}
+          >
+            <span className="field-status-word">「{session.feedback.word}」</span>
+            {session.feedback.status === 'valid' ? (
+              <span className="field-status-points">+{session.feedback.points}点</span>
+            ) : (
+              <span className="field-status-message">{feedbackSubMessage(session.feedback)}</span>
+            )}
+          </div>
+        )}
         {visibleFallingLetters.map((letter: FallingLetter) => {
           const progress = fallingProgress(letter, session.elapsedMs);
           return (
@@ -226,7 +280,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
       </div>
 
       <div className="current-word-bar">
-        <div className="current-word-slots">
+        <div className={`current-word-slots current-word-slots--${wordHeatClass(session.currentWord.length)}`}>
           {session.currentWord ? (
             [...session.currentWord].map((ch, i) => (
               <span key={i} className={`letter-chip letter-chip--${colorForChar(ch)}`}>
@@ -277,16 +331,28 @@ export default function GameScreen({ mode }: GameScreenProps) {
   );
 }
 
-function feedbackClass(feedback: ReturnType<typeof useGameSession>['feedback']): string {
+function feedbackClass(feedback: WordFeedback | null): string {
   if (!feedback) return 'empty';
   if (feedback.status === 'valid') return 'valid';
+  if (feedback.status === 'taken') return 'taken';
   return 'unregistered';
 }
 
-function feedbackMessage(feedback: ReturnType<typeof useGameSession>['feedback']): string {
+function feedbackSubMessage(feedback: WordFeedback | null): string {
   if (!feedback) return '';
-  if (feedback.status === 'valid') return `「${feedback.word}」+${feedback.points}点!`;
-  if (feedback.status === 'unregistered') return `「${feedback.word}」はなかった!`;
-  if (feedback.status === 'taken') return `「${feedback.word}」はほかのプレイヤーが先にとりました!`;
+  if (feedback.status === 'unregistered') return 'はなかった!';
+  if (feedback.status === 'taken') return 'はほかのプレイヤーが先にとりました!';
   return '';
+}
+
+/** 得点成立時のみボーナス段階を返す。マリオの1UPのように、段階が上がるほど演出を派手にする。 */
+function feedbackTier(feedback: WordFeedback | null): BonusTier {
+  if (!feedback || feedback.status !== 'valid') return 'none';
+  return bonusTierForLength(feedback.word.length);
+}
+
+/** 得点が大きいほどポップ演出を大きく見せるための拡大率。 */
+function feedbackPopScale(feedback: WordFeedback | null): number {
+  if (!feedback || feedback.status !== 'valid' || !feedback.points) return 1;
+  return Math.min(1.6, 1 + feedback.points / 200);
 }

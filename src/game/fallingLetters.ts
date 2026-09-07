@@ -44,16 +44,34 @@ export function createInitialFallingLettersState(idPrefix = ''): FallingLettersS
   return { letters: [], lastSpawnedAt: 0, nextId: 0, idPrefix };
 }
 
+/**
+ * `.state`で内部状態を参照できるrng関数。「次に降ってくる文字」プレビューのために
+ * 現在の状態から複製(forkRng)して、本体の乱数列を消費せずに先読みするのに使う。
+ */
+export interface SeededRng {
+  (): number;
+  state: number;
+}
+
 /** mulberry32: シンプルで高速な決定的擬似乱数生成器 */
-export function createRng(seed: number): () => number {
+export function createRng(seed: number): SeededRng {
   let a = seed >>> 0;
-  return function rng() {
+  const rng = (() => {
     a |= 0;
     a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+    const result = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    rng.state = a;
+    return result;
+  }) as SeededRng;
+  rng.state = a;
+  return rng;
+}
+
+/** 現在の内部状態を引き継いだ独立のrngを作る(複製元の乱数列には影響しない)。 */
+export function forkRng(rng: SeededRng): SeededRng {
+  return createRng(rng.state);
 }
 
 export type WeightedChar = readonly [char: string, weight: number];
@@ -90,6 +108,30 @@ export function pickWeightedChar(rng: () => number, weights: readonly WeightedCh
     if (r < 0) return char;
   }
   return weights[weights.length - 1][0];
+}
+
+/**
+ * 実際にはまだ消費していない乱数列を先読みして、次に降ってくる文字を予告表示するための値を返す。
+ * rng自体は複製(forkRng)した上で消費するため、本体の落下ロジックの決定性には影響しない。
+ * 生成順序(文字→x座標の順にrngを1回ずつ消費)はadvanceFallingLettersと合わせてあり、
+ * これにより実際に次スポーンされる文字と完全に一致した予告になる。
+ */
+export function peekUpcomingChars(
+  rng: SeededRng,
+  count: number,
+  options: Pick<AdvanceOptions, 'weights' | 'lettersPerSpawn'> = {},
+): string[] {
+  const weights = options.weights ?? DEFAULT_KANA_WEIGHTS;
+  const lettersPerSpawn = Math.max(1, Math.floor(options.lettersPerSpawn ?? 1));
+  const forked = forkRng(rng);
+  const chars: string[] = [];
+  while (chars.length < count) {
+    for (let lane = 0; lane < lettersPerSpawn && chars.length < count; lane++) {
+      chars.push(pickWeightedChar(forked, weights));
+      forked();
+    }
+  }
+  return chars;
 }
 
 export interface AdvanceOptions {

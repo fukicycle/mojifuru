@@ -3,8 +3,10 @@ import {
   advanceFallingLetters,
   createInitialFallingLettersState,
   createRng,
+  peekUpcomingChars,
   removeLetterById,
   type FallingLetter,
+  type SeededRng,
 } from '../game/fallingLetters';
 import { Dawg } from '../game/dawg';
 import { MAX_WORD_LENGTH, validateWord, type ValidationStatus } from '../game/wordValidator';
@@ -36,10 +38,15 @@ export interface UseGameSessionOptions {
   onFinish: (summary: ScoreSummary) => void;
 }
 
+/** 「次に降ってくる文字」プレビューとして表示する文字数 */
+export const UPCOMING_PREVIEW_COUNT = 3;
+
 export interface GameSession {
   remainingSeconds: number;
   elapsedMs: number;
   fallingLetters: FallingLetter[];
+  /** これから降ってくる直近の文字(先頭が次に出現する文字) */
+  upcomingChars: string[];
   currentWord: string;
   scoredWords: ScoredWord[];
   feedback: WordFeedback | null;
@@ -59,11 +66,12 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
   // (もじふる降下パターンが対戦相手ごとに異なって見えるバグの原因だった)。
   // 実際に文字を降らせ始めるtickエフェクト側で、その時点の最新seedを使って
   // 遅延生成することで、room.seed確定後にのみrngを作るようにする。
-  const rngRef = useRef<(() => number) | null>(null);
+  const rngRef = useRef<SeededRng | null>(null);
   // idPrefixも同じ理由(startAtEpochMsがマウント直後はまだ未確定)で、
   // useStateの遅延初期化に直接渡さずtickエフェクト側で確定させる。
   const idPrefixRef = useRef<string | null>(null);
   const [fallingState, setFallingState] = useState(() => createInitialFallingLettersState());
+  const [upcomingChars, setUpcomingChars] = useState<string[]>([]);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [currentWord, setCurrentWord] = useState('');
   const [scoredWords, setScoredWords] = useState<ScoredWord[]>([]);
@@ -102,6 +110,12 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       setFallingState((s) =>
         advanceFallingLetters(s.idPrefix === idPrefix ? s : { ...s, idPrefix }, clamped, rng, { lettersPerSpawn }),
       );
+      // rng.stateは実際のスポーン(上のadvanceFallingLetters)が消費した時だけ進むため、
+      // ここで先読みしても同じ値が続く限り再計算コストは無視できる。
+      setUpcomingChars((prev) => {
+        const next = peekUpcomingChars(rng, UPCOMING_PREVIEW_COUNT, { lettersPerSpawn });
+        return prev.length === next.length && prev.every((c, i) => c === next[i]) ? prev : next;
+      });
       if (elapsed < durationMs) {
         raf = requestAnimationFrame(tick);
       } else if (!finishedRef.current) {
@@ -166,6 +180,7 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       remainingSeconds,
       elapsedMs,
       fallingLetters: fallingState.letters,
+      upcomingChars,
       currentWord,
       scoredWords,
       feedback,
@@ -174,6 +189,18 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       confirmWord,
       clearWord,
     }),
-    [remainingSeconds, elapsedMs, fallingState.letters, currentWord, scoredWords, feedback, isFinished, collectLetter, confirmWord, clearWord],
+    [
+      remainingSeconds,
+      elapsedMs,
+      fallingState.letters,
+      upcomingChars,
+      currentWord,
+      scoredWords,
+      feedback,
+      isFinished,
+      collectLetter,
+      confirmWord,
+      clearWord,
+    ],
   );
 }
