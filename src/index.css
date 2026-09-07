@@ -562,6 +562,157 @@ button {
   font-size: 14px;
 }
 
+.leaderboard-title {
+  text-align: center;
+}
+
+/*
+ * 表彰台(上位3名)。アイコンと同じ「丸くてつやのあるチップ」の意匠
+ * (円形・グロッシーなハイライト・ドロップシャドウ・わずかな傾き)を踏襲し、
+ * ランキング=称えられる場であることを強く印象づける。
+ */
+.podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px 4px 0;
+}
+
+.podium-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 120px;
+  min-width: 0;
+}
+
+.podium-crown {
+  position: absolute;
+  top: -22px;
+  font-size: 22px;
+  transform: rotate(-8deg);
+}
+
+.podium-chip {
+  position: relative;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 10px rgba(107, 58, 32, 0.3), inset 0 -4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* アイコンのチップにある光沢ハイライトと同じ表現 */
+.podium-chip::before {
+  content: '';
+  position: absolute;
+  top: 16%;
+  left: 20%;
+  width: 32%;
+  height: 24%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.podium-chip-medal {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.podium-name {
+  font-weight: 700;
+  font-size: 13px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium-score {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--text-h);
+  margin-bottom: 6px;
+}
+
+.podium-stand {
+  width: 100%;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 6px;
+  font-size: 18px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.podium-slot--1 .podium-chip {
+  width: 84px;
+  height: 84px;
+  background: linear-gradient(135deg, var(--color-amber), var(--color-amber-strong));
+  transform: rotate(-6deg);
+  animation: podium-glow 2.4s ease-in-out infinite;
+}
+.podium-slot--1 .podium-chip-medal {
+  display: inline-block;
+  font-size: 34px;
+  transform: rotate(6deg);
+}
+.podium-slot--1 .podium-name {
+  font-size: 15px;
+}
+.podium-slot--1 .podium-stand {
+  height: 68px;
+  background: linear-gradient(180deg, var(--color-amber-strong), #c98a00);
+}
+
+.podium-slot--2 .podium-chip {
+  width: 66px;
+  height: 66px;
+  background: linear-gradient(135deg, #eef1f4, #b9c0c9);
+  transform: rotate(8deg);
+}
+.podium-slot--2 .podium-chip-medal {
+  display: inline-block;
+  font-size: 27px;
+  transform: rotate(-8deg);
+}
+.podium-slot--2 .podium-stand {
+  height: 46px;
+  background: linear-gradient(180deg, #b9c0c9, #8b93a0);
+}
+
+.podium-slot--3 .podium-chip {
+  width: 62px;
+  height: 62px;
+  background: linear-gradient(135deg, #e6b88a, #cd8a55);
+  transform: rotate(-8deg);
+}
+.podium-slot--3 .podium-chip-medal {
+  display: inline-block;
+  font-size: 25px;
+  transform: rotate(8deg);
+}
+.podium-slot--3 .podium-stand {
+  height: 36px;
+  background: linear-gradient(180deg, #cd8a55, #a56a3c);
+}
+
+@keyframes podium-glow {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
 .leaderboard-row {
   display: flex;
   align-items: center;
@@ -571,10 +722,17 @@ button {
 }
 
 .leaderboard-rank {
-  width: 2em;
-  text-align: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 700;
+  font-size: 12px;
   color: var(--text-soft);
+  background: #f3ede8;
 }
 
 .leaderboard-name {
@@ -596,55 +754,12 @@ button {
 }
 
 .leaderboard-row--top10 .leaderboard-rank {
-  color: var(--color-amber-strong);
+  color: #8a6d00;
+  background: rgba(255, 210, 63, 0.4);
 }
 
 .leaderboard-row--top10 .leaderboard-score {
   color: var(--color-orange-strong);
-}
-
-.leaderboard-row--top1,
-.leaderboard-row--top2,
-.leaderboard-row--top3 {
-  padding: 14px 12px;
-  animation: leaderboard-glow 2.4s ease-in-out infinite;
-}
-
-.leaderboard-row--top1 .leaderboard-rank,
-.leaderboard-row--top2 .leaderboard-rank,
-.leaderboard-row--top3 .leaderboard-rank {
-  font-size: 1.6em;
-  width: 1.4em;
-}
-
-.leaderboard-row--top1 {
-  background: linear-gradient(90deg, rgba(255, 179, 0, 0.28), rgba(255, 210, 63, 0.08));
-  box-shadow: inset 0 0 0 2px var(--color-amber-strong), 0 4px 12px rgba(255, 179, 0, 0.25);
-}
-
-.leaderboard-row--top1 .leaderboard-name {
-  font-weight: 800;
-  font-size: 1.1em;
-}
-
-.leaderboard-row--top2 {
-  background: linear-gradient(90deg, rgba(200, 200, 210, 0.35), rgba(200, 200, 210, 0.08));
-  box-shadow: inset 0 0 0 2px #b9c0c9, 0 3px 10px rgba(120, 130, 140, 0.2);
-}
-
-.leaderboard-row--top3 {
-  background: linear-gradient(90deg, rgba(205, 133, 63, 0.28), rgba(205, 133, 63, 0.08));
-  box-shadow: inset 0 0 0 2px #cd8a55, 0 3px 10px rgba(180, 110, 60, 0.2);
-}
-
-@keyframes leaderboard-glow {
-  0%,
-  100% {
-    filter: brightness(1);
-  }
-  50% {
-    filter: brightness(1.08);
-  }
 }
 
 .license-section {
