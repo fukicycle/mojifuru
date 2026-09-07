@@ -20,8 +20,10 @@ export default function RoomResultScreen() {
 
   // 誰か1人が「もう一度あそぶ」を押してstartAtがリセットされたら、
   // 全員のこの画面をロビーへ連れ戻す。
+  // RTDBはnullを書き込んだフィールドを削除するため、実際に届く値は
+  // (厳密な)nullではなくundefined(キー自体が存在しない)になる点に注意。
   useEffect(() => {
-    if (roomId && room && room.startAt === null) {
+    if (roomId && room && room.startAt == null) {
       navigate(`/room/${roomId}`);
     }
   }, [room, roomId, navigate]);
