@@ -27,6 +27,9 @@ interface GameContextValue {
   setPlayerName: (name: string) => void;
   lastResult: ScoreSummary | null;
   setLastResult: (result: ScoreSummary | null) => void;
+  /** プレイ中はアップデート通知など操作の妨げになるUIを出さないようにするためのフラグ */
+  isPlaying: boolean;
+  setIsPlaying: (playing: boolean) => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -36,6 +39,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [dawgError, setDawgError] = useState<string | null>(null);
   const [playerName, setPlayerNameState] = useState(loadStoredName);
   const [lastResult, setLastResult] = useState<ScoreSummary | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,8 +73,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setPlayerName,
       lastResult,
       setLastResult,
+      isPlaying,
+      setIsPlaying,
     }),
-    [dawg, dawgError, playerName, lastResult],
+    [dawg, dawgError, playerName, lastResult, isPlaying],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

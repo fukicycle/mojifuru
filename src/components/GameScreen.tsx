@@ -24,10 +24,19 @@ interface GameScreenProps {
 export default function GameScreen({ mode }: GameScreenProps) {
   const navigate = useNavigate();
   const { roomId } = useParams();
-  const { dawg, dawgError, setLastResult, playerName, firebaseEnabled } = useGameContext();
+  const { dawg, dawgError, setLastResult, playerName, firebaseEnabled, setIsPlaying } = useGameContext();
 
   const [room, setRoom] = useState<Room | null>(null);
   const uidRef = useRef<string | null>(null);
+  const roomReady = mode === 'solo' || (room !== null && room.startAt !== null);
+  const isPlayfieldReady = Boolean(dawg) && roomReady;
+
+  // アップデート通知など操作の妨げになるUIを、実際にプレイ画面が表示されている間だけ抑止する
+  useEffect(() => {
+    if (!isPlayfieldReady) return;
+    setIsPlaying(true);
+    return () => setIsPlaying(false);
+  }, [isPlayfieldReady, setIsPlaying]);
 
   useEffect(() => {
     if (mode !== 'room' || !roomId || !firebaseEnabled) return;
@@ -74,8 +83,6 @@ export default function GameScreen({ mode }: GameScreenProps) {
     },
     [firebaseEnabled],
   );
-
-  const roomReady = mode === 'solo' || (room !== null && room.startAt !== null);
 
   const session = useGameSession({
     dawg: roomReady ? dawg : null,

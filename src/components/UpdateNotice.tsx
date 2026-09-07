@@ -1,4 +1,5 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { useGameContext } from '../context/GameContext';
 
 // GitHub Pagesの静的配信ではSWの更新確認がページ遷移時などに限られ、
 // タブを開きっぱなしのユーザには新バージョンが長時間届かないことがあるため、
@@ -6,6 +7,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
 export default function UpdateNotice() {
+  const { isPlaying } = useGameContext();
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
@@ -18,7 +20,9 @@ export default function UpdateNotice() {
     },
   });
 
-  if (!needRefresh) return null;
+  // プレイ中に出るとリロードを誘発して操作の妨げになるため、
+  // 検知はしておきつつプレイが終わるまで表示だけ保留する
+  if (!needRefresh || isPlaying) return null;
 
   return (
     <div className="update-notice">
