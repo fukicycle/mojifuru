@@ -35,6 +35,9 @@
         "startAt": {
           ".validate": "newData.val() === null || newData.val() === now"
         },
+        "playerCountAtStart": {
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 32"
+        },
 
         "players": {
           "$uid": {

@@ -1,12 +1,19 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
 
 // https://vite.dev/config/
 export default defineConfig({
   // GitHub Pages(https://<user>.github.io/mojifuru/)でのプロジェクトページ配信を想定
   base: '/mojifuru/',
+  // ホーム画面フッターにバージョン表示するため、package.jsonのversionをビルド時に埋め込む
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     react(),
     VitePWA({

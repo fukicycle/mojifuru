@@ -82,6 +82,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
     seed: mode === 'room' ? room?.seed : undefined,
     startAtEpochMs: mode === 'room' ? (room?.startAt ?? undefined) : undefined,
     claimLetter: mode === 'room' ? handleClaimLetter : undefined,
+    playerCount: mode === 'room' ? room?.playerCountAtStart : undefined,
     onWordConfirmed: handleWordConfirmed,
     onUnregisteredWord: handleUnregisteredWord,
     onFinish: handleFinish,

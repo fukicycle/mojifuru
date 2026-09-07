@@ -29,6 +29,8 @@ export interface UseGameSessionOptions {
   startAtEpochMs?: number;
   /** 対戦モード: 文字取得の排他制御(早い者勝ち)。falseを返した場合は取得できない */
   claimLetter?: (letterId: string) => Promise<boolean>;
+  /** 対戦モードの参加人数。人数に応じて文字の出現量をスケールする(省略時は1人分) */
+  playerCount?: number;
   onWordConfirmed?: (scored: ScoredWord) => void;
   onUnregisteredWord?: (word: string) => void;
   onFinish: (summary: ScoreSummary) => void;
@@ -48,13 +50,20 @@ export interface GameSession {
 }
 
 export function useGameSession(options: UseGameSessionOptions): GameSession {
-  const { dawg, durationSec = 60, seed, startAtEpochMs, claimLetter, onWordConfirmed, onUnregisteredWord, onFinish } = options;
+  const { dawg, durationSec = 60, seed, startAtEpochMs, claimLetter, playerCount, onWordConfirmed, onUnregisteredWord, onFinish } = options;
   const durationMs = durationSec * 1000;
 
-  const rngRef = useRef(createRng(seed ?? Math.floor(Math.random() * 2 ** 31)));
-  const [fallingState, setFallingState] = useState(() =>
-    createInitialFallingLettersState(startAtEpochMs !== undefined ? `t${startAtEpochMs}-` : ''),
-  );
+  // 対戦モードでは room.seed がFirebaseから届くまで `seed` がundefinedのまま
+  // 最初のレンダリングを迎える。useRefの初期値はマウント時に一度きりしか
+  // 評価されないため、ここでランダムseedを生成してしまうと対戦相手と食い違う
+  // (もじふる降下パターンが対戦相手ごとに異なって見えるバグの原因だった)。
+  // 実際に文字を降らせ始めるtickエフェクト側で、その時点の最新seedを使って
+  // 遅延生成することで、room.seed確定後にのみrngを作るようにする。
+  const rngRef = useRef<(() => number) | null>(null);
+  // idPrefixも同じ理由(startAtEpochMsがマウント直後はまだ未確定)で、
+  // useStateの遅延初期化に直接渡さずtickエフェクト側で確定させる。
+  const idPrefixRef = useRef<string | null>(null);
+  const [fallingState, setFallingState] = useState(() => createInitialFallingLettersState());
   const [elapsedMs, setElapsedMs] = useState(0);
   const [currentWord, setCurrentWord] = useState('');
   const [scoredWords, setScoredWords] = useState<ScoredWord[]>([]);
@@ -70,6 +79,15 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
 
   useEffect(() => {
     if (!dawg) return;
+    if (!rngRef.current) {
+      rngRef.current = createRng(seed ?? Math.floor(Math.random() * 2 ** 31));
+    }
+    if (idPrefixRef.current === null) {
+      idPrefixRef.current = startAtEpochMs !== undefined ? `t${startAtEpochMs}-` : '';
+    }
+    const rng = rngRef.current;
+    const idPrefix = idPrefixRef.current;
+    const lettersPerSpawn = Math.max(1, Math.min(6, playerCount ?? 1));
     let raf = 0;
     const tick = (now: number) => {
       let elapsed: number;
@@ -81,7 +99,9 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       }
       const clamped = Math.min(elapsed, durationMs);
       setElapsedMs(clamped);
-      setFallingState((s) => advanceFallingLetters(s, clamped, rngRef.current));
+      setFallingState((s) =>
+        advanceFallingLetters(s.idPrefix === idPrefix ? s : { ...s, idPrefix }, clamped, rng, { lettersPerSpawn }),
+      );
       if (elapsed < durationMs) {
         raf = requestAnimationFrame(tick);
       } else if (!finishedRef.current) {

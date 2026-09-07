@@ -96,6 +96,12 @@ export interface AdvanceOptions {
   weights?: readonly WeightedChar[];
   /** 一度の advance で無限ループしないための安全弁(通常は到達しない) */
   maxSpawnsPerAdvance?: number;
+  /**
+   * 1回のスポーンタイミングで同時に降らせる文字数。対戦モードで参加人数が
+   * 増えると1人あたりが取れる文字が相対的に減ってしまうため、人数に応じて
+   * 増やすことを想定している(既定は1=ソロプレイと同じ密度)。
+   */
+  lettersPerSpawn?: number;
 }
 
 /**
@@ -110,6 +116,7 @@ export function advanceFallingLetters(
 ): FallingLettersState {
   const weights = options.weights ?? DEFAULT_KANA_WEIGHTS;
   const maxSpawns = options.maxSpawnsPerAdvance ?? 10_000;
+  const lettersPerSpawn = Math.max(1, Math.floor(options.lettersPerSpawn ?? 1));
 
   const letters = state.letters.filter((l) => elapsedMs - l.spawnedAt < FALL_DURATION_MS + FALL_EXIT_BUFFER_MS);
   let { lastSpawnedAt, nextId } = state;
@@ -118,12 +125,16 @@ export function advanceFallingLetters(
   let guard = 0;
   while (lastSpawnedAt + SPAWN_INTERVAL_MS <= elapsedMs && guard < maxSpawns) {
     lastSpawnedAt += SPAWN_INTERVAL_MS;
-    spawned.push({
-      id: `${state.idPrefix}l${nextId++}`,
-      char: pickWeightedChar(rng, weights),
-      x: rng(),
-      spawnedAt: lastSpawnedAt,
-    });
+    // 同時スポーン分は横方向をレーン分割してから乱数で散らし、
+    // 複数人数分に増やしても同じ位置に重なって見えないようにする。
+    for (let lane = 0; lane < lettersPerSpawn; lane++) {
+      spawned.push({
+        id: `${state.idPrefix}l${nextId++}`,
+        char: pickWeightedChar(rng, weights),
+        x: (lane + rng()) / lettersPerSpawn,
+        spawnedAt: lastSpawnedAt,
+      });
+    }
     guard++;
   }
 

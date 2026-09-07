@@ -127,6 +127,7 @@ export default function TitleScreen() {
         <Link to="/leaderboard">ランキング</Link>
         <Link to="/license">ライセンス</Link>
       </div>
+      <p className="app-version">v{__APP_VERSION__}</p>
     </div>
   );
 }

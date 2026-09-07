@@ -24,6 +24,8 @@ export interface Room {
   seed: number;
   startAt: number | null;
   duration: number;
+  /** 開始時点の参加人数。降ってくる文字の量をスケールするため、開始時に固定する */
+  playerCountAtStart?: number;
   players: Record<string, RoomPlayer>;
   takenLetters?: Record<string, string>;
 }
@@ -64,7 +66,13 @@ export async function joinRoom(roomId: string, uid: string, name: string): Promi
 /** ホストがゲーム開始時刻を確定させる(参加者全員が同じstartAtから残り時間を計算する) */
 export async function startRoom(roomId: string): Promise<void> {
   const db = getFirebaseDb();
-  await update(ref(db, `rooms/${roomId}`), { startAt: serverTimestamp() });
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const snapshot = await get(roomRef);
+  const room = snapshot.val() as Room | null;
+  // 対戦中に参加人数が変わると文字の出現量スケールが端末ごとにズレてしまうため、
+  // ラウンド開始時点の人数をここで固定する。
+  const playerCountAtStart = room ? Object.keys(room.players ?? {}).length : 1;
+  await update(roomRef, { startAt: serverTimestamp(), playerCountAtStart });
 }
 
 /**

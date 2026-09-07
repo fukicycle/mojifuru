@@ -11,3 +11,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// vite.config.tsのdefineでpackage.jsonのversionから埋め込まれるビルド時定数
+declare const __APP_VERSION__: string;
