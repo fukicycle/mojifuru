@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { resetOwnRoundState, startRoom, subscribeRoom, type Room } from '../firebase/room';
+import { leaveRoom, resetOwnRoundState, startRoom, subscribeRoom, type Room } from '../firebase/room';
 import { useGameContext } from '../context/GameContext';
 import { signInAnonymouslyOnce } from '../firebase/config';
 
@@ -96,7 +96,13 @@ export default function RoomLobbyScreen() {
         >
           ゲーム開始
         </button>
-        <button className="button button--ghost button--block" onClick={() => navigate('/')}>
+        <button
+          className="button button--ghost button--block"
+          onClick={() => {
+            if (roomId && uid) void leaveRoom(roomId, uid);
+            navigate('/');
+          }}
+        >
           やめる
         </button>
       </div>

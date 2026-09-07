@@ -1,7 +1,9 @@
 import {
   get,
+  onDisconnect,
   onValue,
   ref,
+  remove,
   runTransaction,
   serverTimestamp,
   set,
@@ -37,6 +39,19 @@ function generateRoomId(): string {
   return id;
 }
 
+/**
+ * タブを閉じる・接続が切れるなど「退出」を明示的に検知できないケースに備え、
+ * 自分のplayersエントリをサーバ側に「切断時に削除」として予約する。
+ * SPA内のページ遷移ではWebSocket接続自体は切れないため消えず、実際に
+ * タブを閉じる/リロードする/オフラインになったときにだけ発火する。
+ */
+function registerLeaveOnDisconnect(roomId: string, uid: string): void {
+  const db = getFirebaseDb();
+  onDisconnect(ref(db, `rooms/${roomId}/players/${uid}`)).remove().catch(() => {
+    // onDisconnectの登録自体に失敗しても致命的ではないため無視する
+  });
+}
+
 /** ルームを新規作成し、ルームコードを返す。降下パターン共有用のseedもここで決まる。 */
 export async function createRoom(uid: string, name: string): Promise<string> {
   const db = getFirebaseDb();
@@ -50,6 +65,7 @@ export async function createRoom(uid: string, name: string): Promise<string> {
       [uid]: { name, score: 0, wordsFormed: [] } satisfies RoomPlayer,
     },
   });
+  registerLeaveOnDisconnect(roomId, uid);
   return roomId;
 }
 
@@ -60,7 +76,17 @@ export async function joinRoom(roomId: string, uid: string, name: string): Promi
   const snapshot = await get(roomRef);
   if (!snapshot.exists()) return null;
   await set(ref(db, `rooms/${roomId}/players/${uid}`), { name, score: 0, wordsFormed: [] } satisfies RoomPlayer);
+  registerLeaveOnDisconnect(roomId, uid);
   return (await get(roomRef)).val() as Room;
+}
+
+/**
+ * 「やめる」など明示的な退出操作用。onDisconnectの発火(タブを閉じる等)を待たずに
+ * 即座に自分のplayersエントリを削除する。
+ */
+export async function leaveRoom(roomId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  await remove(ref(db, `rooms/${roomId}/players/${uid}`));
 }
 
 /** ホストがゲーム開始時刻を確定させる(参加者全員が同じstartAtから残り時間を計算する) */
@@ -102,7 +128,18 @@ export function subscribeRoom(
   return onValue(
     ref(db, `rooms/${roomId}`),
     (snapshot) => {
-      onChange(snapshot.exists() ? (snapshot.val() as Room) : null);
+      if (!snapshot.exists()) {
+        onChange(null);
+        return;
+      }
+      const room = snapshot.val() as Room;
+      onChange(room);
+      // 全員が退出(明示的な退出 or onDisconnectでの自動削除)してplayersが
+      // 空になったら、そのタイミングで購読中のクライアントがルームごと閉じる。
+      // 複数クライアントが同時に呼んでも削除は冪等なので競合の心配はない。
+      if (!room.players || Object.keys(room.players).length === 0) {
+        void remove(ref(db, `rooms/${roomId}`));
+      }
     },
     (error) => {
       // onValueは購読中にエラーが起きると以後コールバックが呼ばれなくなる。

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { restartRoom, subscribeRoom, type Room } from '../firebase/room';
+import { leaveRoom, restartRoom, subscribeRoom, type Room } from '../firebase/room';
 import { useGameContext } from '../context/GameContext';
+import { signInAnonymouslyOnce } from '../firebase/config';
 
 export default function RoomResultScreen() {
   const { roomId } = useParams();
@@ -10,6 +11,12 @@ export default function RoomResultScreen() {
   const [room, setRoom] = useState<Room | null>(null);
   const [restarting, setRestarting] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [uid, setUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!firebaseEnabled) return;
+    signInAnonymouslyOnce().then(setUid);
+  }, [firebaseEnabled]);
 
   useEffect(() => {
     if (!roomId || !firebaseEnabled) return;
@@ -73,7 +80,13 @@ export default function RoomResultScreen() {
         <button className="button button--primary button--block" onClick={handleRematch} disabled={restarting}>
           もう一度あそぶ
         </button>
-        <button className="button button--ghost button--block" onClick={() => navigate('/')}>
+        <button
+          className="button button--ghost button--block"
+          onClick={() => {
+            if (roomId && uid) void leaveRoom(roomId, uid);
+            navigate('/');
+          }}
+        >
           タイトルへ
         </button>
       </div>
