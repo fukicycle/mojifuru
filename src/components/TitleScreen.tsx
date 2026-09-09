@@ -54,7 +54,7 @@ export default function TitleScreen() {
   return (
     <div className="screen screen--center">
       <h1 className="app-logo">もじふる</h1>
-      <p className="app-tagline">降ってくるひらがなであつめて、単語をつくろう</p>
+      <p className="app-tagline">降ってくるひらがなをあつめて、単語をつくろう</p>
 
       <input
         className="text-input"
