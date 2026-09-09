@@ -21,6 +21,7 @@ import {
   type Room,
 } from '../firebase/room';
 import { signInAnonymouslyOnce } from '../firebase/config';
+import { playSfx } from '../audio/sfx';
 
 const CHIP_COLORS = ['magenta', 'orange', 'aqua'] as const;
 const MAX_VISIBLE_AVATARS = 5;
@@ -50,7 +51,8 @@ interface GameScreenProps {
 export default function GameScreen({ mode }: GameScreenProps) {
   const navigate = useNavigate();
   const { roomId } = useParams();
-  const { dawg, dawgError, setLastResult, firebaseEnabled, setIsPlaying } = useGameContext();
+  const { dawg, dawgError, setLastResult, firebaseEnabled, setIsPlaying, soundEnabled, toggleSound } =
+    useGameContext();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -84,6 +86,19 @@ export default function GameScreen({ mode }: GameScreenProps) {
     tick();
     return () => cancelAnimationFrame(raf);
   }, [gameStartAtEpochMs]);
+
+  // カウントダウンの数字が切り替わるたびに音を鳴らし、0になった(=ゲーム開始)瞬間だけ
+  // 別のスタート音を鳴らす。ソロプレイ(countdownSecondsが常にnull)では発火しない。
+  const prevCountdownRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevCountdownRef.current;
+    prevCountdownRef.current = countdownSeconds;
+    if (countdownSeconds !== null && countdownSeconds !== prev) {
+      playSfx('countdownTick');
+    } else if (countdownSeconds === null && prev !== null) {
+      playSfx('countdownGo');
+    }
+  }, [countdownSeconds]);
 
   // アップデート通知など操作の妨げになるUIを、実際にプレイ画面が表示されている間だけ抑止する
   useEffect(() => {
@@ -260,6 +275,14 @@ export default function GameScreen({ mode }: GameScreenProps) {
         <div className={`timer ${session.remainingSeconds <= 10 ? 'timer--urgent' : ''}`}>
           {session.remainingSeconds}秒
         </div>
+        <button
+          type="button"
+          className="sound-toggle"
+          aria-label={soundEnabled ? '効果音をオフにする' : '効果音をオンにする'}
+          onClick={toggleSound}
+        >
+          {soundEnabled ? '🔊' : '🔇'}
+        </button>
       </div>
 
       <div className="next-letters-preview">

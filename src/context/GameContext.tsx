@@ -3,6 +3,7 @@ import { Dawg, loadDawg } from '../game/dawg';
 import type { ScoreSummary } from '../game/scoring';
 import { generateDefaultName } from '../game/nameGenerator';
 import { isFirebaseConfigured } from '../firebase/config';
+import { isSoundEnabled, setSoundEnabled as persistSoundEnabled } from '../audio/sfx';
 
 const PLAYER_NAME_KEY = 'mojifuru:playerName';
 
@@ -30,6 +31,8 @@ interface GameContextValue {
   /** プレイ中はアップデート通知など操作の妨げになるUIを出さないようにするためのフラグ */
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
+  soundEnabled: boolean;
+  toggleSound: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -40,6 +43,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [playerName, setPlayerNameState] = useState(loadStoredName);
   const [lastResult, setLastResult] = useState<ScoreSummary | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [soundEnabled, setSoundEnabledState] = useState(isSoundEnabled);
+
+  const toggleSound = () => {
+    setSoundEnabledState((prev) => {
+      const next = !prev;
+      persistSoundEnabled(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -75,8 +87,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLastResult,
       isPlaying,
       setIsPlaying,
+      soundEnabled,
+      toggleSound,
     }),
-    [dawg, dawgError, playerName, lastResult, isPlaying],
+    [dawg, dawgError, playerName, lastResult, isPlaying, soundEnabled],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

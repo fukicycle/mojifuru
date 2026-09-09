@@ -11,6 +11,7 @@ import {
 import { Dawg } from '../game/dawg';
 import { MAX_WORD_LENGTH, validateWord, type ValidationStatus } from '../game/wordValidator';
 import { summarizeScore, type ScoreSummary, type ScoredWord } from '../game/scoring';
+import { playSfx } from '../audio/sfx';
 
 export interface WordFeedback {
   word: string;
@@ -84,6 +85,8 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
   onFinishRef.current = onFinish;
   const finishedRef = useRef(false);
   const startRef = useRef<number | null>(null);
+  // 終了間際(残り5秒以下)のカウントダウン音を、秒が切り替わった瞬間に一度だけ鳴らすための記録
+  const lastUrgentSecondRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!dawg) return;
@@ -107,6 +110,11 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       }
       const clamped = Math.min(elapsed, durationMs);
       setElapsedMs(clamped);
+      const remainingSec = Math.max(0, Math.ceil((durationMs - clamped) / 1000));
+      if (remainingSec !== lastUrgentSecondRef.current) {
+        lastUrgentSecondRef.current = remainingSec;
+        if (remainingSec > 0 && remainingSec <= 5) playSfx('timerUrgent');
+      }
       setFallingState((s) =>
         advanceFallingLetters(s.idPrefix === idPrefix ? s : { ...s, idPrefix }, clamped, rng, { lettersPerSpawn }),
       );
@@ -121,6 +129,7 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       } else if (!finishedRef.current) {
         finishedRef.current = true;
         setIsFinished(true);
+        playSfx('timeUp');
         onFinishRef.current(summarizeScore(scoredWordsRef.current));
       }
     };
@@ -138,6 +147,7 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       const applyLocally = () => {
         setFallingState((s) => removeLetterById(s, letterId));
         setCurrentWord((w) => w + char);
+        playSfx('collect');
       };
 
       if (claimLetter) {
@@ -148,6 +158,7 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
             // 対戦相手が先にこの文字を取得済み。タップが無反応に見えないよう、
             // 取れなかったことを明示的にフィードバックする。
             setFeedback({ word: char, status: 'taken' });
+            playSfx('claimFailed');
           }
         });
       } else {
@@ -166,9 +177,15 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       setScoredWords((words) => [...words, result.scored!]);
       setFeedback({ word: currentWord, status: 'valid', points: result.scored.totalPoints });
       onWordConfirmed?.(result.scored);
+      if (result.scored.bonusTier === 'grand-bonus') playSfx('confirmGrandBonus');
+      else if (result.scored.bonusTier === 'bonus') playSfx('confirmBonus');
+      else playSfx('confirmValid');
     } else {
       setFeedback({ word: currentWord, status: result.status });
-      if (result.status === 'unregistered') onUnregisteredWord?.(currentWord);
+      if (result.status === 'unregistered') {
+        onUnregisteredWord?.(currentWord);
+        playSfx('confirmUnregistered');
+      }
     }
     setCurrentWord('');
   }, [currentWord, dawg, onUnregisteredWord, onWordConfirmed]);
