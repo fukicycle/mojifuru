@@ -65,7 +65,20 @@ export default function GameScreen({ mode }: GameScreenProps) {
   // 一定秒数のカウントダウンを挟んでからプレイを始める。全員が同じroom.startAtから
   // 逆算するため、追加の同期なしにカウントダウンも全員一致する。
   const roomStartAt = mode === 'room' ? (room?.startAt ?? undefined) : undefined;
-  const gameStartAtEpochMs = roomStartAt !== undefined ? roomStartAt + ROOM_COUNTDOWN_SECONDS * 1000 : undefined;
+  // ソロプレイには同期対象がないため、辞書読み込み完了(dawgが揃った最初のレンダー)を
+  // 起点にその場でカウントダウンの終了時刻を確定させる。useGameSession側のrng/idPrefix
+  // 遅延生成(下記コメント参照)と同じ理由で、dawgが揃うのと同じレンダーで値を確定させる
+  // 必要があるため、effectではなくレンダー中にrefへ書き込む一回きりの遅延初期化にしている。
+  const soloStartAtRef = useRef<number | undefined>(undefined);
+  if (mode === 'solo' && dawg && soloStartAtRef.current === undefined) {
+    soloStartAtRef.current = Date.now() + ROOM_COUNTDOWN_SECONDS * 1000;
+  }
+  const gameStartAtEpochMs =
+    mode === 'room'
+      ? roomStartAt !== undefined
+        ? roomStartAt + ROOM_COUNTDOWN_SECONDS * 1000
+        : undefined
+      : soloStartAtRef.current;
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
 
   useEffect(() => {
@@ -88,7 +101,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
   }, [gameStartAtEpochMs]);
 
   // カウントダウンの数字が切り替わるたびに音を鳴らし、0になった(=ゲーム開始)瞬間だけ
-  // 別のスタート音を鳴らす。ソロプレイ(countdownSecondsが常にnull)では発火しない。
+  // 別のスタート音を鳴らす。ソロ・対戦どちらもgameStartAtEpochMs起点で共通に動く。
   const prevCountdownRef = useRef<number | null>(null);
   useEffect(() => {
     const prev = prevCountdownRef.current;
@@ -166,7 +179,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const session = useGameSession({
     dawg: roomReady ? dawg : null,
     seed: mode === 'room' ? room?.seed : undefined,
-    startAtEpochMs: mode === 'room' ? gameStartAtEpochMs : undefined,
+    startAtEpochMs: gameStartAtEpochMs,
     claimLetter: mode === 'room' ? handleClaimLetter : undefined,
     playerCount: mode === 'room' ? room?.playerCountAtStart : undefined,
     onWordConfirmed: handleWordConfirmed,
@@ -338,7 +351,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
         ref={fallingFieldRef}
         onPointerDown={handleFieldPointerDown}
       >
-        {mode === 'room' && countdownSeconds !== null && (
+        {countdownSeconds !== null && (
           <div className="countdown-overlay">
             <span key={countdownSeconds} className="countdown-number">
               {countdownSeconds}

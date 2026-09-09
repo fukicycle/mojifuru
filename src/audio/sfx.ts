@@ -30,6 +30,9 @@ let audioCtx: AudioContext | null = null;
 let enabled = loadEnabled();
 /** プレイ画面に居る間だけ true。'playback' を主張してよい区間の判定に使う */
 let inGameScreen = false;
+/** 直近でスケジュールした音の終了時刻(AudioContext#currentTime基準)。suspend()を早めすぎないために使う */
+let busyUntil = 0;
+let pendingSuspendTimer: ReturnType<typeof setTimeout> | null = null;
 
 function loadEnabled(): boolean {
   try {
@@ -112,6 +115,10 @@ export function primeAudio(): void {
  */
 export function beginGameAudio(): void {
   inGameScreen = true;
+  if (pendingSuspendTimer !== null) {
+    clearTimeout(pendingSuspendTimer);
+    pendingSuspendTimer = null;
+  }
   applyAudioSession();
   if (enabled) primeAudio();
 }
@@ -119,11 +126,30 @@ export function beginGameAudio(): void {
 /**
  * プレイ画面を離れたので 'auto' に戻す。あわせてAudioContextをsuspendして
  * audio sessionを手放し、中断していた他アプリの音楽が再開できるようにする。
+ *
+ * ただし終了音(timeUp等)がまだ鳴り終わっていない場合、即suspendすると波形が
+ * 途中で打ち切られ「ぶちっ」というノイズになる。鳴らし終わるまではsuspendを遅らせる。
  */
 export function endGameAudio(): void {
   inGameScreen = false;
-  applyAudioSession();
-  if (audioCtx?.state === 'running') void audioCtx.suspend();
+  if (pendingSuspendTimer !== null) {
+    clearTimeout(pendingSuspendTimer);
+    pendingSuspendTimer = null;
+  }
+  const ctx = audioCtx;
+  const remainingSec = ctx && ctx.state === 'running' ? busyUntil - ctx.currentTime : 0;
+  if (ctx && remainingSec > 0) {
+    // 'auto'への切り替えもsuspend()も、鳴り終わるまで遅らせて途中で打ち切らないようにする
+    pendingSuspendTimer = setTimeout(() => {
+      pendingSuspendTimer = null;
+      if (inGameScreen) return;
+      applyAudioSession();
+      if (ctx.state === 'running') void ctx.suspend();
+    }, remainingSec * 1000);
+  } else {
+    applyAudioSession();
+    if (ctx?.state === 'running') void ctx.suspend();
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -174,7 +200,9 @@ function playTones(tones: readonly Tone[]): void {
     osc.connect(gainNode);
     gainNode.connect(ctx.destination);
     osc.start(start);
-    osc.stop(end + 0.02);
+    const stopAt = end + 0.02;
+    osc.stop(stopAt);
+    if (stopAt > busyUntil) busyUntil = stopAt;
   }
 }
 
