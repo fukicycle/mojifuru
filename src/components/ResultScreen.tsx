@@ -14,7 +14,9 @@ function tierLabel(tier: BonusTier): string {
 export default function ResultScreen() {
   const navigate = useNavigate();
   const { lastResult, playerName, firebaseEnabled } = useGameContext();
-  const [submitState, setSubmitState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  // 'kept' は「自己ベストに届かなかった」= 正常終了。エラーとして見せない
+  const [submitState, setSubmitState] = useState<'idle' | 'sending' | 'updated' | 'kept' | 'error'>('idle');
+  const [bestScore, setBestScore] = useState<number | null>(null);
   const submittedRef = useRef(false);
   // プレイ終了間際は「確定」ボタンを連打しがちで、その残り連打がそのまま
   // 同じ画面位置にある「もう一度あそぶ」を誤タップしてしまう事故を防ぐため、
@@ -38,8 +40,9 @@ export default function ResultScreen() {
     (async () => {
       try {
         const uid = await signInAnonymouslyOnce();
-        await submitScore(uid, name, lastResult.totalScore);
-        setSubmitState('done');
+        const result = await submitScore(uid, name, lastResult.totalScore);
+        setBestScore(result.bestScore);
+        setSubmitState(result.improved ? 'updated' : 'kept');
       } catch {
         setSubmitState('error');
       }
@@ -58,10 +61,14 @@ export default function ResultScreen() {
           <span>ボーナス {lastResult.bonusCount}回</span>
           <span>大ボーナス {lastResult.grandBonusCount}回</span>
         </div>
-        {firebaseEnabled && (
-          <p style={{ fontSize: 12, color: 'var(--text-soft)', marginTop: 6 }}>
+        {firebaseEnabled && submitState !== 'idle' && (
+          <p className={`submit-status submit-status--${submitState}`}>
             {submitState === 'sending' && 'ランキングに登録中...'}
-            {submitState === 'done' && 'ランキングに登録しました!'}
+            {submitState === 'updated' && '自己ベスト更新!ランキングに登録しました'}
+            {submitState === 'kept' &&
+              (bestScore === null
+                ? '自己ベストはそのままです'
+                : `自己ベストは ${bestScore}点 のままです`)}
             {submitState === 'error' && 'ランキングへの登録に失敗しました'}
           </p>
         )}

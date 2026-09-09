@@ -137,6 +137,7 @@ mojifuru/
 - `players/{uid}`:`auth.uid == $uid` のときのみ書き込み可。`score` は1回の増加量を200以下に制限(`MAX_SCORE_INCREMENT_PER_WORD` と同値に保つこと)
 - `takenLetters/{letterId}`:`!data.exists()` のときのみ書き込み可(早い者勝ちの排他制御)。値は `auth.uid` に限定
 - `leaderboard`:読み取りは公開、書き込みは本人のみ。`bestScore` は増加のみ、`updatedAt` は `now` のみ許可、`name` は20文字以内
+- `updatedAt === now` の制約があるため、**自己ベスト未満のときに同じ値を書き戻すと permission denied になる**。`submitScore` はその場合トランザクションを中止(`undefined` を返す)し、UIでも「登録失敗」ではなく「自己ベストは◯点のまま」と伝える(過去の実バグ)
 
 ## デザイン仕様(確定事項・変更しないこと)
 
