@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { leaveRoom, startRoom, subscribeRoom, type Room } from '../firebase/room';
 import { useGameContext } from '../context/GameContext';
 import { signInAnonymouslyOnce } from '../firebase/config';
+import { ChipLoader, ChipTitle, DecoChips, EmptyChip } from './decor';
+import { colorForChar } from './chipColors';
 
 export default function RoomLobbyScreen() {
   const { roomId } = useParams();
@@ -35,8 +37,9 @@ export default function RoomLobbyScreen() {
 
   if (!firebaseEnabled) {
     return (
-      <div className="screen screen--center">
-        <p style={{ color: 'var(--text-soft)' }}>Firebaseが未設定のため、対戦モードは利用できません。</p>
+      <div className="screen screen--center screen--decorated">
+        <DecoChips />
+        <EmptyChip mark="!" text="Firebaseが未設定のため、対戦モードは利用できません。" />
         <button className="button button--ghost button--block" onClick={() => navigate('/')}>
           タイトルへもどる
         </button>
@@ -57,23 +60,37 @@ export default function RoomLobbyScreen() {
   const players = room ? Object.entries(room.players ?? {}) : [];
 
   return (
-    <div className="screen screen--center">
-      <h2>ルーム</h2>
-      <div className="room-code">{roomId}</div>
+    <div className="screen screen--center screen--decorated">
+      <DecoChips />
+
+      <ChipTitle text="ルーム" caption="ルームコードを友だちにおくろう" />
+
+      <div className="panel panel--text room-code-card">
+        <p className="room-code-label">ルームコード</p>
+        <div className="room-code">{roomId}</div>
+      </div>
       <button className="button button--ghost" onClick={handleCopy}>
         {copied ? 'コピーしました!' : 'ルームコードをコピー'}
       </button>
 
-      <div className="player-list" style={{ marginTop: 16, maxHeight: '40vh', overflowY: 'auto', width: '100%' }}>
-        {players.map(([uid, player]) => (
-          <div className="player-list-row" key={uid}>
-            <span>{player.name || 'ななしさん'}</span>
-          </div>
-        ))}
-        {players.length === 0 && <p style={{ color: 'var(--text-soft)' }}>参加者を待っています...</p>}
+      <p className="count-badge count-badge--center">さんかしゃ {players.length}人</p>
+
+      <div className="panel player-list" style={{ maxHeight: '32vh', overflowY: 'auto', width: '100%' }}>
+        {players.map(([uid, player]) => {
+          const name = player.name || 'ななしさん';
+          return (
+            <div className="player-list-row" key={uid}>
+              <span className={`player-avatar player-avatar--${colorForChar(name[0])}`} aria-hidden="true">
+                {name[0]}
+              </span>
+              <span className="player-list-name">{name}</span>
+            </div>
+          );
+        })}
+        {players.length === 0 && <ChipLoader text="さんかしゃを まっています..." />}
       </div>
 
-      {syncError && <p style={{ color: 'crimson', fontSize: 13, marginTop: 8 }}>{syncError}</p>}
+      {syncError && <p className="form-error">{syncError}</p>}
 
       <div className="button-row" style={{ marginTop: 16 }}>
         <button

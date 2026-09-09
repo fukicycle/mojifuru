@@ -4,6 +4,9 @@ import { leaveRoom, resetOwnRoundState, restartRoom, subscribeRoom, type Room } 
 import { useGameContext } from '../context/GameContext';
 import { signInAnonymouslyOnce } from '../firebase/config';
 import type { BonusTier } from '../game/scoring';
+import { ChipTitle, DecoChips, EmptyChip } from './decor';
+
+const TOP_MEDALS = ['🥇', '🥈', '🥉'];
 
 function tierLabel(tier: BonusTier): string {
   if (tier === 'grand-bonus') return '大ボーナス';
@@ -80,8 +83,9 @@ export default function RoomResultScreen() {
 
   if (!firebaseEnabled) {
     return (
-      <div className="screen screen--center">
-        <p style={{ color: 'var(--text-soft)' }}>Firebaseが未設定のため、対戦モードは利用できません。</p>
+      <div className="screen screen--center screen--decorated">
+        <DecoChips />
+        <EmptyChip mark="!" text="Firebaseが未設定のため、対戦モードは利用できません。" />
         <button className="button button--ghost button--block" onClick={() => navigate('/')}>
           タイトルへもどる
         </button>
@@ -92,12 +96,17 @@ export default function RoomResultScreen() {
   const ranked = Object.entries(room?.players ?? {}).sort(([, a], [, b]) => b.score - a.score);
 
   return (
-    <div className="screen">
-      <h2 style={{ textAlign: 'center' }}>けっか発表</h2>
-      <div className="player-list" style={{ flex: '0 1 auto', maxHeight: '32vh', overflowY: 'auto' }}>
+    <div className="screen screen--decorated">
+      <DecoChips />
+
+      <ChipTitle text="けっか" caption="このラウンドのじゅんい" />
+
+      <div className="panel" style={{ flex: '0 1 auto', maxHeight: '32vh', overflowY: 'auto' }}>
         {ranked.map(([uid, player], i) => (
-          <div className="leaderboard-row" key={uid}>
-            <div className="leaderboard-rank">{i + 1}</div>
+          <div className={'leaderboard-row' + (i < 3 ? ' leaderboard-row--top10' : '')} key={uid}>
+            <div className="leaderboard-rank">
+              {i < 3 ? <span className="rank-medal">{TOP_MEDALS[i]}</span> : i + 1}
+            </div>
             <div className="leaderboard-name">{player.name || 'ななしさん'}</div>
             <div className="leaderboard-score">{player.score}点</div>
           </div>
@@ -105,10 +114,8 @@ export default function RoomResultScreen() {
       </div>
 
       {lastResult && (
-        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-          <h3 style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-soft)', margin: '0 0 6px' }}>
-            じぶんの成立単語
-          </h3>
+        <div className="panel panel--scroll">
+          <h3 className="panel-heading">じぶんの成立単語</h3>
           <table className="word-list-table">
             <thead>
               <tr>
@@ -140,7 +147,7 @@ export default function RoomResultScreen() {
         </div>
       )}
 
-      {syncError && <p style={{ color: 'crimson', fontSize: 13, textAlign: 'center' }}>{syncError}</p>}
+      {syncError && <p className="form-error" style={{ textAlign: 'center' }}>{syncError}</p>}
 
       <div className="button-row" style={{ margin: '16px auto 0' }}>
         <button

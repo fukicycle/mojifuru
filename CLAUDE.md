@@ -148,6 +148,8 @@ mojifuru/
 - レイアウト:モバイルファースト。ゲームキャンバス最大幅420px(`--canvas-max-width`)、PCでは左右レターボックス。縦も900px上限だが、これは幅480px以上のときのみ適用(スマホ実機で上下に背景の段差が出るため)
 - ページ全体のスクロールは禁止(`html`/`body` を `overflow: hidden`)。スクロールが必要な画面は内側のコンテナだけに `overflow-y: auto` を持たせる
 - 操作は `click` ではなく `pointerdown` で確定させる(反応の遅さを避けるため)
+- **画面共通の飾り**:全画面をアイコン(丸くてつやのある3色の文字チップ)と同じテイストで揃える。パーツは `src/components/decor.tsx`(`DecoChips` 背景の浮遊チップ / `ChipTitle` チップ見出し / `ChipLoader` 読み込み中 / `EmptyChip` 空状態)、器は `.screen--decorated` と `.panel`(半透明カード)。飾りは必ず `pointer-events: none` で操作を妨げないこと。ゲーム画面(`GameScreen`)だけは視認性・パフォーマンス優先で飾りを入れない
+- 文字チップの色決定 `colorForChar` は `src/components/chipColors.ts` に集約(同じ文字は常に同じ色)
 - 開発者ツール対策:F12無効化などの強い制限は不採用。右クリック無効化のみ `App.tsx` で実施
 
 ## 明示的に不採用となった案(再検討不要)

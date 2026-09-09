@@ -22,15 +22,9 @@ import {
 } from '../firebase/room';
 import { signInAnonymouslyOnce } from '../firebase/config';
 import { beginGameAudio, endGameAudio, playSfx } from '../audio/sfx';
+import { colorForChar } from './chipColors';
 
-const CHIP_COLORS = ['magenta', 'orange', 'aqua'] as const;
 const MAX_VISIBLE_AVATARS = 5;
-
-function colorForChar(char: string): (typeof CHIP_COLORS)[number] {
-  let hash = 0;
-  for (let i = 0; i < char.length; i++) hash = (hash * 31 + char.charCodeAt(i)) >>> 0;
-  return CHIP_COLORS[hash % CHIP_COLORS.length];
-}
 
 /**
  * 収集中の単語欄の色調。文字数が増えるほど、ボーナス成立(5文字)・大ボーナス成立(7文字)の

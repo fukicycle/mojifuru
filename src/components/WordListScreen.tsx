@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChipLoader, ChipTitle, DecoChips, EmptyChip } from './decor';
 
 interface WordEntry {
   word: string;
@@ -69,8 +70,11 @@ export default function WordListScreen() {
   const visibleRows = filtered.slice(startIndex, endIndex);
 
   return (
-    <div className="screen">
-      <h2>単語一覧</h2>
+    <div className="screen screen--decorated">
+      <DecoChips chars={['あ', 'い', 'う', 'え', 'お', 'ん']} />
+
+      <ChipTitle text="たんご" caption="ゲームに収録している単語の一覧" />
+
       <input
         className="text-input"
         placeholder="単語やかなで検索"
@@ -104,12 +108,12 @@ export default function WordListScreen() {
         ))}
       </div>
 
-      {error && <p style={{ color: 'crimson' }}>読み込みに失敗しました: {error}</p>}
-      {!error && !words && <p>読み込み中...(約{'6.5万'}語)</p>}
+      {error && <p className="form-error">読み込みに失敗しました: {error}</p>}
+      {!error && !words && <ChipLoader text={`よみこみ中...(約${'6.5万'}語)`} />}
 
       {words && (
         <>
-          <p style={{ fontSize: 12, color: 'var(--text-soft)' }}>{filtered.length}件</p>
+          <p className="count-badge">{filtered.length}件</p>
           <div
             className="virtual-list"
             ref={containerRef}
@@ -127,6 +131,7 @@ export default function WordListScreen() {
                 </div>
               ))}
             </div>
+            {filtered.length === 0 && <EmptyChip text="あてはまる単語が見つかりませんでした" />}
           </div>
         </>
       )}

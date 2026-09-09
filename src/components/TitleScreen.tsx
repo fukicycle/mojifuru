@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
 import { signInAnonymouslyOnce } from '../firebase/config';
 import { createRoom, joinRoom } from '../firebase/room';
+import { DecoChips } from './decor';
 
 export default function TitleScreen() {
   const navigate = useNavigate();
@@ -52,7 +53,9 @@ export default function TitleScreen() {
   }
 
   return (
-    <div className="screen screen--center">
+    <div className="screen screen--center screen--decorated">
+      <DecoChips />
+
       <h1 className="app-logo">もじふる</h1>
       <p className="app-tagline">降ってくるひらがなをあつめて、単語をつくろう</p>
 
@@ -65,11 +68,9 @@ export default function TitleScreen() {
         onChange={(e) => setPlayerName(e.target.value)}
         style={{ maxWidth: 280, marginBottom: nameMissing ? 4 : 8 }}
       />
-      {nameMissing && (
-        <p style={{ color: 'crimson', fontSize: 13, marginTop: 0, marginBottom: 8 }}>なまえを入力してください</p>
-      )}
+      {nameMissing && <p className="form-error" style={{ marginBottom: 8 }}>なまえを入力してください</p>}
 
-      {dawgError && <p style={{ color: 'crimson', fontSize: 13 }}>辞書の読み込みに失敗しました: {dawgError}</p>}
+      {dawgError && <p className="form-error">辞書の読み込みに失敗しました: {dawgError}</p>}
 
       <div className="button-row">
         <button
@@ -119,7 +120,7 @@ export default function TitleScreen() {
                 </div>
               </>
             )}
-            {error && <p style={{ color: 'crimson', fontSize: 13 }}>{error}</p>}
+            {error && <p className="form-error">{error}</p>}
           </div>
         )}
       </div>

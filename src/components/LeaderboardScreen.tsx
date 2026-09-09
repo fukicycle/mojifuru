@@ -8,6 +8,7 @@ import {
   type LeaderboardPeriod,
   type LeaderboardRow,
 } from '../firebase/leaderboard';
+import { ChipLoader, ChipTitle, DecoChips, EmptyChip } from './decor';
 
 const TOP_MEDALS = ['🥇', '🥈', '🥉'];
 // 表彰台の見た目の並び順(向かって左から2位・1位・3位)
@@ -18,12 +19,6 @@ const PERIOD_TABS: { period: LeaderboardPeriod; label: string }[] = [
   { period: 'monthly', label: 'マンスリー' },
   { period: 'allTime', label: '全期間' },
 ];
-
-// タイトルもアイコンと同じ「丸い文字チップ」で組む。色はアイコンの3色を順に割り当てる。
-const TITLE_CHIPS = ['ラ', 'ン', 'キ', 'ン', 'グ'];
-const CHIP_COLORS = ['magenta', 'orange', 'aqua'];
-// 背景に浮かべる飾りの文字(アプリ名の文字を散らす)
-const DECO_CHARS = ['も', 'じ', 'ふ', 'る', 'も', 'じ'];
 
 function periodCaption(period: LeaderboardPeriod): string {
   if (period === 'daily') return `${currentDailyKey()} のきろく`;
@@ -47,36 +42,12 @@ export default function LeaderboardScreen() {
   const rest = rows?.slice(3) ?? [];
 
   return (
-    <div className="screen leaderboard-screen">
-      {/* 背景の飾り。アイコンと同じ丸チップを薄く散らす(操作の邪魔はしない) */}
-      <div className="lb-deco" aria-hidden="true">
-        {DECO_CHARS.map((char, i) => (
-          <span key={i} className={`lb-deco-chip lb-deco-chip--${CHIP_COLORS[i % CHIP_COLORS.length]}`}>
-            {char}
-          </span>
-        ))}
-      </div>
+    <div className="screen screen--decorated leaderboard-screen">
+      <DecoChips />
 
-      <div className="leaderboard-header">
-        <h2 className="leaderboard-title">
-          <span className="lb-title-spark lb-title-spark--left" aria-hidden="true">
-            ✨
-          </span>
-          <span className="lb-title-chips">
-            {TITLE_CHIPS.map((char, i) => (
-              <span key={i} className={`lb-title-chip lb-title-chip--${CHIP_COLORS[i % CHIP_COLORS.length]}`}>
-                {char}
-              </span>
-            ))}
-          </span>
-          <span className="lb-title-spark lb-title-spark--right" aria-hidden="true">
-            ✨
-          </span>
-        </h2>
-        <p className="leaderboard-caption">{periodCaption(period)}</p>
-      </div>
+      <ChipTitle text="ランキング" caption={periodCaption(period)} />
 
-      <div className="tab-row lb-tab-row">
+      <div className="tab-row tab-row--track">
         {PERIOD_TABS.map((tab) => (
           <button
             key={tab.period}
@@ -92,14 +63,7 @@ export default function LeaderboardScreen() {
         <p style={{ color: 'var(--text-soft)', fontSize: 14 }}>Firebaseが未設定のため、ランキングは利用できません。</p>
       )}
 
-      {firebaseEnabled && rows === null && (
-        <div className="lb-loading">
-          <span className="lb-loading-chip lb-loading-chip--magenta">も</span>
-          <span className="lb-loading-chip lb-loading-chip--orange">じ</span>
-          <span className="lb-loading-chip lb-loading-chip--aqua">ふ</span>
-          <p className="lb-loading-text">よみこみ中...</p>
-        </div>
-      )}
+      {firebaseEnabled && rows === null && <ChipLoader />}
 
       {firebaseEnabled && rows !== null && (
         <>
@@ -127,15 +91,8 @@ export default function LeaderboardScreen() {
             </div>
           )}
 
-          <div className="leaderboard-list">
-            {rows.length === 0 && (
-              <div className="lb-empty">
-                <span className="lb-empty-chip" aria-hidden="true">
-                  ?
-                </span>
-                <p className="lb-empty-text">まだ記録がありません。一番乗りを目指そう!</p>
-              </div>
-            )}
+          <div className="panel panel--scroll">
+            {rows.length === 0 && <EmptyChip text="まだ記録がありません。一番乗りを目指そう!" />}
             {rest.map((row, i) => {
               const rank = i + 4;
               const isTop10 = rank <= 10;
@@ -149,7 +106,7 @@ export default function LeaderboardScreen() {
             })}
           </div>
 
-          {rows.length > 0 && <p className="leaderboard-footnote">ぜんぶで {rows.length}人 のきろく</p>}
+          {rows.length > 0 && <p className="screen-footnote">ぜんぶで {rows.length}人 のきろく</p>}
         </>
       )}
 

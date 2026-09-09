@@ -1,12 +1,16 @@
 import { useNavigate } from 'react-router-dom';
+import { ChipTitle, DecoChips } from './decor';
 
 export default function LicensePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="screen">
-      <h2>ライセンス表記</h2>
-      <div className="license-section" style={{ flex: 1, overflowY: 'auto' }}>
+    <div className="screen screen--decorated">
+      <DecoChips />
+
+      <ChipTitle text="ライセンス" caption="辞書データの出典と表記" />
+
+      <div className="license-section panel panel--scroll panel--text">
         <p>
           「もじふる」の判定用辞書・単語一覧は、以下のオープンデータをもとに、品詞によるフィルタリングと
           クロスチェックによる絞り込みを行った上で生成しています。生成処理は{' '}

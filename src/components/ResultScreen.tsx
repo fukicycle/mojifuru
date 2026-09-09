@@ -4,6 +4,7 @@ import { useGameContext } from '../context/GameContext';
 import { signInAnonymouslyOnce } from '../firebase/config';
 import { submitScore } from '../firebase/leaderboard';
 import type { BonusTier } from '../game/scoring';
+import { ChipTitle, DecoChips } from './decor';
 
 function tierLabel(tier: BonusTier): string {
   if (tier === 'grand-bonus') return '大ボーナス';
@@ -52,11 +53,14 @@ export default function ResultScreen() {
   if (!lastResult) return null;
 
   return (
-    <div className="screen">
-      <h2 style={{ textAlign: 'center' }}>けっか</h2>
-      <div style={{ textAlign: 'center' }}>
+    <div className="screen screen--decorated">
+      <DecoChips />
+
+      <ChipTitle text="けっか" />
+
+      <div className="panel panel--text result-card">
         <div className="result-total">{lastResult.totalScore}点</div>
-        <div className="result-stats" style={{ justifyContent: 'center', marginTop: 4 }}>
+        <div className="result-stats">
           <span>成立 {lastResult.wordCount}語</span>
           <span>ボーナス {lastResult.bonusCount}回</span>
           <span>大ボーナス {lastResult.grandBonusCount}回</span>
@@ -74,7 +78,7 @@ export default function ResultScreen() {
         )}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div className="panel panel--scroll">
         <table className="word-list-table">
           <thead>
             <tr>
