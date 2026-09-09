@@ -533,6 +533,47 @@ button {
   transition: background 0.4s ease;
 }
 
+/* 対戦モード:「ゲーム開始」〜プレイ開始までのカウントダウン。全員が同じroom.startAtから
+ * 逆算するため追加の同期なしで一致する。プレイ面の上に重ねて表示し、まだ文字は降ってこない
+ * (elapsedがカウントダウン終了まで0にクランプされているため)ことを視覚的にも伝える。 */
+.countdown-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 248, 240, 0.55);
+  pointer-events: none;
+}
+
+.countdown-number {
+  font-size: 96px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-orange-strong);
+  text-shadow: 0 4px 10px rgba(255, 140, 0, 0.35);
+  animation: countdown-pop 1s ease-out;
+}
+
+@keyframes countdown-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  40% {
+    transform: scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /*
  * 単語成立時のフィードバックを、マリオの1UPのように「ポンと跳ねて上へ浮かびながら消える」
  * ポップアップ演出にする。得点が大きいほど(--pop-scaleとtier別のアニメーションで)

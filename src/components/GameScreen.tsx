@@ -13,7 +13,13 @@ import {
   type ScoreSummary,
 } from '../game/scoring';
 import { reportUnregisteredWord } from '../firebase/wordCandidates';
-import { claimLetter as claimLetterInRoom, subscribeRoom, submitRoomWord, type Room } from '../firebase/room';
+import {
+  claimLetter as claimLetterInRoom,
+  ROOM_COUNTDOWN_SECONDS,
+  subscribeRoom,
+  submitRoomWord,
+  type Room,
+} from '../firebase/room';
 import { signInAnonymouslyOnce } from '../firebase/config';
 
 const CHIP_COLORS = ['magenta', 'orange', 'aqua'] as const;
@@ -52,6 +58,32 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const fallingFieldRef = useRef<HTMLDivElement | null>(null);
   const roomReady = mode === 'solo' || (room !== null && room.startAt !== null);
   const isPlayfieldReady = Boolean(dawg) && roomReady;
+
+  // 対戦モードでは「ゲーム開始」が押された瞬間(room.startAtが確定した瞬間)から
+  // 一定秒数のカウントダウンを挟んでからプレイを始める。全員が同じroom.startAtから
+  // 逆算するため、追加の同期なしにカウントダウンも全員一致する。
+  const roomStartAt = mode === 'room' ? (room?.startAt ?? undefined) : undefined;
+  const gameStartAtEpochMs = roomStartAt !== undefined ? roomStartAt + ROOM_COUNTDOWN_SECONDS * 1000 : undefined;
+  const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (gameStartAtEpochMs === undefined) {
+      setCountdownSeconds(null);
+      return;
+    }
+    let raf = 0;
+    const tick = () => {
+      const remaining = gameStartAtEpochMs - Date.now();
+      if (remaining <= 0) {
+        setCountdownSeconds(null);
+        return;
+      }
+      setCountdownSeconds(Math.ceil(remaining / 1000));
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(raf);
+  }, [gameStartAtEpochMs]);
 
   // アップデート通知など操作の妨げになるUIを、実際にプレイ画面が表示されている間だけ抑止する
   useEffect(() => {
@@ -111,7 +143,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const session = useGameSession({
     dawg: roomReady ? dawg : null,
     seed: mode === 'room' ? room?.seed : undefined,
-    startAtEpochMs: mode === 'room' ? (room?.startAt ?? undefined) : undefined,
+    startAtEpochMs: mode === 'room' ? gameStartAtEpochMs : undefined,
     claimLetter: mode === 'room' ? handleClaimLetter : undefined,
     playerCount: mode === 'room' ? room?.playerCountAtStart : undefined,
     onWordConfirmed: handleWordConfirmed,
@@ -275,6 +307,13 @@ export default function GameScreen({ mode }: GameScreenProps) {
         ref={fallingFieldRef}
         onPointerDown={handleFieldPointerDown}
       >
+        {mode === 'room' && countdownSeconds !== null && (
+          <div className="countdown-overlay">
+            <span key={countdownSeconds} className="countdown-number">
+              {countdownSeconds}
+            </span>
+          </div>
+        )}
         {session.feedback && (
           <div
             key={feedbackKey}

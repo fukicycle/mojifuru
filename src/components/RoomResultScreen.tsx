@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { leaveRoom, restartRoom, subscribeRoom, type Room } from '../firebase/room';
+import { leaveRoom, resetOwnRoundState, restartRoom, subscribeRoom, type Room } from '../firebase/room';
 import { useGameContext } from '../context/GameContext';
 import { signInAnonymouslyOnce } from '../firebase/config';
+import type { BonusTier } from '../game/scoring';
+
+function tierLabel(tier: BonusTier): string {
+  if (tier === 'grand-bonus') return '大ボーナス';
+  if (tier === 'bonus') return 'ボーナス';
+  return '';
+}
 
 export default function RoomResultScreen() {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const { firebaseEnabled } = useGameContext();
+  const { firebaseEnabled, lastResult } = useGameContext();
   const [room, setRoom] = useState<Room | null>(null);
   const [restarting, setRestarting] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -16,6 +23,12 @@ export default function RoomResultScreen() {
   // 「もう一度あそぶ」を誤って発火させないよう、遷移直後は操作を受け付けない。
   // ルーム対戦では全員を巻き込む再戦になるため、ソロ版より重要な対策。
   const [controlsReady, setControlsReady] = useState(false);
+  // この結果画面に到達した時点のstartAt(今表示しているラウンドのもの)。
+  // 誰かが再戦してstartAtが更新されたら、全員のこの画面がそれを検知し、
+  // 自分のスコアだけリセットした上で(セキュリティルール上、本人のuidでしか書けない)
+  // ロビーを経由せず直接プレイ画面へ進む。
+  const initialStartAtRef = useRef<number | null | undefined>(undefined);
+  const rematchHandledRef = useRef(false);
 
   useEffect(() => {
     if (!firebaseEnabled) return;
@@ -34,15 +47,23 @@ export default function RoomResultScreen() {
     );
   }, [roomId, firebaseEnabled]);
 
-  // 誰か1人が「もう一度あそぶ」を押してstartAtがリセットされたら、
-  // 全員のこの画面をロビーへ連れ戻す。
-  // RTDBはnullを書き込んだフィールドを削除するため、実際に届く値は
-  // (厳密な)nullではなくundefined(キー自体が存在しない)になる点に注意。
+  // 誰か1人が「もう一度あそぶ」を押してstartAtが更新されたら、全員のこの画面が
+  // それを検知する。ロビーには戻さず、自分のスコア・成立単語をリセットしてから
+  // (セキュリティルール上、本人のuidでしか書き込めないため各自がここで行う)
+  // 直接プレイ画面(カウントダウン)へ進む。
   useEffect(() => {
-    if (roomId && room && room.startAt == null) {
-      navigate(`/room/${roomId}`);
+    if (!room) return;
+    if (initialStartAtRef.current === undefined) {
+      initialStartAtRef.current = room.startAt;
+      return;
     }
-  }, [room, roomId, navigate]);
+    if (rematchHandledRef.current || !roomId || !uid) return;
+    if (room.startAt !== initialStartAtRef.current) {
+      rematchHandledRef.current = true;
+      void resetOwnRoundState(roomId, uid);
+      navigate(`/room/${roomId}/play`);
+    }
+  }, [room, roomId, uid, navigate]);
 
   if (!roomId) return null;
 
@@ -73,7 +94,7 @@ export default function RoomResultScreen() {
   return (
     <div className="screen">
       <h2 style={{ textAlign: 'center' }}>けっか発表</h2>
-      <div className="player-list" style={{ flex: 1, overflowY: 'auto' }}>
+      <div className="player-list" style={{ flex: '0 1 auto', maxHeight: '32vh', overflowY: 'auto' }}>
         {ranked.map(([uid, player], i) => (
           <div className="leaderboard-row" key={uid}>
             <div className="leaderboard-rank">{i + 1}</div>
@@ -82,6 +103,42 @@ export default function RoomResultScreen() {
           </div>
         ))}
       </div>
+
+      {lastResult && (
+        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+          <h3 style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-soft)', margin: '0 0 6px' }}>
+            じぶんの成立単語
+          </h3>
+          <table className="word-list-table">
+            <thead>
+              <tr>
+                <th>単語</th>
+                <th>点数</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lastResult.words.map((w, i) => (
+                <tr key={i}>
+                  <td>
+                    {w.word}
+                    {w.bonusTier !== 'none' && (
+                      <span className={`tier-tag tier-tag--${w.bonusTier}`}>{tierLabel(w.bonusTier)}</span>
+                    )}
+                  </td>
+                  <td>{w.totalPoints}</td>
+                </tr>
+              ))}
+              {lastResult.words.length === 0 && (
+                <tr>
+                  <td colSpan={2} style={{ color: 'var(--text-soft)', textAlign: 'center' }}>
+                    成立した単語はありませんでした
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {syncError && <p style={{ color: 'crimson', fontSize: 13, textAlign: 'center' }}>{syncError}</p>}
 

@@ -14,6 +14,8 @@ import { getFirebaseDb } from './config';
 export const ROOM_DURATION_SECONDS = 60;
 /** 1回の単語成立で加算できるスコアの上限(セキュリティルールと同じ値。改ざん対策の目安) */
 export const MAX_SCORE_INCREMENT_PER_WORD = 200;
+/** 「ゲーム開始」からプレイ開始までのカウントダウン秒数(全員が同じstartAtから逆算する) */
+export const ROOM_COUNTDOWN_SECONDS = 3;
 
 export interface RoomPlayer {
   name: string;
@@ -102,18 +104,24 @@ export async function startRoom(roomId: string): Promise<void> {
 }
 
 /**
- * 同じルームでもう一度遊べるようにロビーへ戻す。
- * startAtをnullに戻すことで、全員のロビー画面(startAt !== nullで
- * プレイ画面へ遷移する仕組み)を巻き戻し、seedを新しくして
- * 降ってくる文字のパターンも次回戦は変える。
+ * 同じルームでもう一度遊ぶ。ロビーを経由させず、startRoomと同様に新しいstartAtを
+ * 即座に確定させることで、結果画面から直接カウントダウン→プレイ開始へつなげる。
+ * seedも新しくして降ってくる文字のパターンを次回戦は変える。
+ * 各プレイヤーのスコア・成立単語のリセットは、セキュリティルール上
+ * 本人のuidでしか書き込めないため、ここでは行わない
+ * (各クライアントがstartAtの変化を検知した際にresetOwnRoundStateで自分の分を行う)。
  */
 export async function restartRoom(roomId: string): Promise<void> {
   const db = getFirebaseDb();
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const snapshot = await get(roomRef);
+  const room = snapshot.val() as Room | null;
   const seed = Math.floor(Math.random() * 2 ** 31);
-  await update(ref(db, `rooms/${roomId}`), { startAt: null, seed });
+  const playerCountAtStart = room ? Object.keys(room.players ?? {}).length : 1;
+  await update(roomRef, { startAt: serverTimestamp(), seed, playerCountAtStart });
 }
 
-/** ロビーに戻った際、前回ラウンドの自分のスコア・成立単語をリセットする */
+/** 再戦時、前回ラウンドの自分のスコア・成立単語をリセットする */
 export async function resetOwnRoundState(roomId: string, uid: string): Promise<void> {
   const db = getFirebaseDb();
   await update(ref(db, `rooms/${roomId}/players/${uid}`), { score: 0, wordsFormed: null });
