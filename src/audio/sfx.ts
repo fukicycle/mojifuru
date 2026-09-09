@@ -3,14 +3,33 @@
  *
  * 静的ホスティングのみという制約とライセンス表記の手間を避けるため、音声ファイルは
  * 一切使わず Web Audio API のオシレーターでその場に音を合成する(ちいさなピコピコ音)。
- * AudioContextはブラウザの自動再生制限により、実際にユーザー操作(タップ)から呼ばれる
- * playSfx() の初回呼び出し時に遅延生成する。
+ * AudioContextはブラウザの自動再生制限により、実際のユーザー操作(タップ)から
+ * 生成・resumeしないと suspended のままになるため、最初のpointerdownで先に用意する
+ * (primeAudio)。対戦モードのカウントダウン音はrAF由来で鳴るため、これがないと
+ * iOS Safariではラウンドまるごと無音になる。
+ *
+ * iOSのサイレントスイッチ(マナーモード)対策:
+ * Web Audioだけで音を出すとiOSのaudio sessionは既定で 'ambient' 扱いになり、
+ * 本体のサイレントスイッチONで完全に無音化される。スイッチの状態を読み取るWeb APIは
+ * 存在せず「マナーモードに自動追従」は実装不可能なため、Audio Session APIで
+ * 'playback' を宣言してスイッチを無視し、音の有無はアプリ内の🔊トグルに委ねる。
+ *
+ * ただし 'playback' は非ミックスで、宣言している間はユーザーが裏で流している音楽を
+ * 止めてしまう。そのため常時ではなく、プレイ画面にいる間だけ beginGameAudio() で
+ * 'playback' を取得し、離れたら endGameAudio() で 'auto' に戻してセッションも手放す。
  */
+
+/** navigator.audioSession はまだ lib.dom に無いため最小限の型を用意する */
+interface AudioSessionLike {
+  type: 'auto' | 'playback' | 'transient' | 'transient-solo' | 'transient-passthrough' | 'ambient' | 'play-and-record';
+}
 
 const STORAGE_KEY = 'mojifuru:soundEnabled';
 
 let audioCtx: AudioContext | null = null;
 let enabled = loadEnabled();
+/** プレイ画面に居る間だけ true。'playback' を主張してよい区間の判定に使う */
+let inGameScreen = false;
 
 function loadEnabled(): boolean {
   try {
@@ -36,15 +55,92 @@ export function isSoundEnabled(): boolean {
 export function setSoundEnabled(value: boolean): void {
   enabled = value;
   persistEnabled(value);
+  // プレイ中にオフにされたら 'playback' の主張も取り下げる(他アプリの音楽を巻き添えにしない)
+  applyAudioSession();
+  // トグル操作自体がユーザー操作なので、オンにした瞬間にアンロックを済ませておく
+  if (value) primeAudio();
+}
+
+/**
+ * Audio Session APIの種別を宣言する。Safari 16.4+ / iOS 16.4+ のみ対応で、
+ * 未対応環境では何も起きない(従来どおりサイレントスイッチに従う)。
+ */
+function setAudioSessionType(type: AudioSessionLike['type']): void {
+  const session = (navigator as unknown as { audioSession?: AudioSessionLike }).audioSession;
+  if (!session) return;
+  try {
+    session.type = type;
+  } catch {
+    // 未知の値を弾く実装でも致命的ではないため無視する
+  }
+}
+
+/**
+ * 現在の状況に見合ったセッション種別を宣言し直す。
+ * プレイ中かつ音がオンのときだけ 'playback'(=マナーモードを無視)を主張し、
+ * それ以外は 'auto' に戻して他アプリの音楽と共存できる状態にしておく。
+ */
+function applyAudioSession(): void {
+  setAudioSessionType(inGameScreen && enabled ? 'playback' : 'auto');
 }
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
-  if (!audioCtx) audioCtx = new Ctor();
+  if (!audioCtx) {
+    // AudioContextを作る前に種別を確定させておく
+    applyAudioSession();
+    audioCtx = new Ctor();
+  }
   if (audioCtx.state === 'suspended') void audioCtx.resume();
   return audioCtx;
+}
+
+/**
+ * ユーザー操作の中でAudioContextを起こしておく。iOSはジェスチャ外のresume()が効かないため、
+ * 「最初のタップ」でこれを済ませておかないと、以降どのタイミングの音も鳴らなくなる。
+ */
+export function primeAudio(): void {
+  getAudioContext();
+}
+
+/**
+ * プレイ画面に入った(=これから効果音を鳴らす)ことを宣言する。
+ * ここで初めて 'playback' を取得するので、タイトルやランキングを眺めている間は
+ * ユーザーが裏で流している音楽を止めない。
+ */
+export function beginGameAudio(): void {
+  inGameScreen = true;
+  applyAudioSession();
+  if (enabled) primeAudio();
+}
+
+/**
+ * プレイ画面を離れたので 'auto' に戻す。あわせてAudioContextをsuspendして
+ * audio sessionを手放し、中断していた他アプリの音楽が再開できるようにする。
+ */
+export function endGameAudio(): void {
+  inGameScreen = false;
+  applyAudioSession();
+  if (audioCtx?.state === 'running') void audioCtx.suspend();
+}
+
+if (typeof window !== 'undefined') {
+  // 最初のユーザー操作でアンロックする。captureで拾い、他のハンドラのstopPropagationに負けないようにする。
+  // 音がオフの間は不要なAudioContext(=iOSでの他アプリ音楽の中断)を作らず、オンになるまで待ち続ける。
+  const unlockOnFirstGesture = () => {
+    if (!enabled) return;
+    primeAudio();
+    window.removeEventListener('pointerdown', unlockOnFirstGesture, true);
+  };
+  window.addEventListener('pointerdown', unlockOnFirstGesture, true);
+  // PWAをバックグラウンドに送るとAudioContextはsuspendされ、自動では戻らない。
+  // ただしendGameAudio()による意図的なsuspendを起こさないよう、プレイ中に限る。
+  document.addEventListener('visibilitychange', () => {
+    if (!inGameScreen || !enabled) return;
+    if (document.visibilityState === 'visible' && audioCtx?.state === 'suspended') void audioCtx.resume();
+  });
 }
 
 interface Tone {

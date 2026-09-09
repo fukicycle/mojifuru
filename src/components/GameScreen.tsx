@@ -21,7 +21,7 @@ import {
   type Room,
 } from '../firebase/room';
 import { signInAnonymouslyOnce } from '../firebase/config';
-import { playSfx } from '../audio/sfx';
+import { beginGameAudio, endGameAudio, playSfx } from '../audio/sfx';
 
 const CHIP_COLORS = ['magenta', 'orange', 'aqua'] as const;
 const MAX_VISIBLE_AVATARS = 5;
@@ -99,6 +99,14 @@ export default function GameScreen({ mode }: GameScreenProps) {
       playSfx('countdownGo');
     }
   }, [countdownSeconds]);
+
+  // iOSのサイレントスイッチを無視する 'playback' セッションは、宣言している間ユーザーが
+  // 裏で流している音楽を止めてしまう。効果音を鳴らすのはこの画面だけなので、
+  // 取得もこの画面の滞在中だけに限る(カウントダウン音に間に合うようマウント時から)。
+  useEffect(() => {
+    beginGameAudio();
+    return () => endGameAudio();
+  }, []);
 
   // アップデート通知など操作の妨げになるUIを、実際にプレイ画面が表示されている間だけ抑止する
   useEffect(() => {
