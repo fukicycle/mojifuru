@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChipLoader, ChipTitle, DecoChips, EmptyChip } from './decor';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 
 interface WordEntry {
   word: string;
@@ -24,6 +25,7 @@ const GOJUON_GROUPS: readonly [label: string, chars: string][] = [
 const ROW_HEIGHT = 40;
 
 export default function WordListScreen() {
+  useDocumentMeta('収録単語一覧', 'もじふるで得点になるひらがな単語の一覧です。文字数・五十音・検索で絞り込めます。');
   const navigate = useNavigate();
   const [words, setWords] = useState<WordEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -54,6 +54,15 @@ npm run build
 
 Firebaseを設定しない場合でも「ひとりで遊ぶ」モードは通常どおり動作します。
 
+### Google Analytics(任意)
+
+Firebaseプロジェクトで Google Analytics を有効化している場合、`.env.local` の
+`VITE_FIREBASE_MEASUREMENT_ID`(Firebaseコンソール > プロジェクトの設定 > 全般 の測定ID、`G-`から始まる値)
+を設定するとGA4計測が有効になります。GitHub Pagesへのデプロイ時は `VITE_FIREBASE_MEASUREMENT_ID`
+をリポジトリのActions Secretsにも登録してください。未設定の場合はAnalyticsが無効化されるだけで、
+他の機能には影響しません。react-router-dom によるSPA内遷移も `page_view` として個別に送信されます
+(`src/App.tsx` の `AnalyticsTracker`)。
+
 ## PWA対応
 
 `vite-plugin-pwa`(generateSWモード)によりオフライン起動・ホーム画面追加に対応しています。

@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { ChipTitle, DecoChips } from './decor';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 
 export default function LicensePage() {
+  useDocumentMeta('ライセンス表記', 'もじふるが利用しているMozc辞書・JMdictなど辞書データの出典とライセンス表記です。');
   const navigate = useNavigate();
 
   return (

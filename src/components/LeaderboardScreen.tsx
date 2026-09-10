@@ -9,6 +9,7 @@ import {
   type LeaderboardRow,
 } from '../firebase/leaderboard';
 import { ChipLoader, ChipTitle, DecoChips, EmptyChip } from './decor';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 
 const TOP_MEDALS = ['🥇', '🥈', '🥉'];
 // 表彰台の見た目の並び順(向かって左から2位・1位・3位)
@@ -27,6 +28,7 @@ function periodCaption(period: LeaderboardPeriod): string {
 }
 
 export default function LeaderboardScreen() {
+  useDocumentMeta('ランキング', 'もじふるのデイリー・マンスリー・全期間ランキングです。全国のプレイヤーとハイスコアを競おう。');
   const navigate = useNavigate();
   const { firebaseEnabled } = useGameContext();
   const [period, setPeriod] = useState<LeaderboardPeriod>('daily');

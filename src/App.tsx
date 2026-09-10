@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { GameProvider } from './context/GameContext';
+import { logAnalyticsPageView } from './firebase/config';
 import TitleScreen from './components/TitleScreen';
 import GameScreen from './components/GameScreen';
 import ResultScreen from './components/ResultScreen';
@@ -10,6 +11,17 @@ import LicensePage from './components/LicensePage';
 import RoomLobbyScreen from './components/RoomLobbyScreen';
 import RoomResultScreen from './components/RoomResultScreen';
 import UpdateNotice from './components/UpdateNotice';
+
+/** react-router-dom側のルート遷移(履歴API)はページ再読み込みを伴わないため、GA4のpage_viewを都度手動送信する */
+function AnalyticsTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    logAnalyticsPageView(location.pathname);
+  }, [location.pathname]);
+
+  return null;
+}
 
 export default function App() {
   useEffect(() => {
@@ -23,6 +35,7 @@ export default function App() {
     <GameProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <div className="app-shell">
+          <AnalyticsTracker />
           <Routes>
             <Route path="/" element={<TitleScreen />} />
             <Route path="/game" element={<GameScreen mode="solo" />} />

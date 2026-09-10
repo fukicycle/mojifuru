@@ -6,13 +6,55 @@
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="もじふる: 上から降ってくるひらがなをタップして単語を作るブラウザゲーム" />
+    <meta
+      name="description"
+      content="もじふるは、上から降ってくるひらがなをタップして集め、制限時間内に単語を作ってスコアを競う無料のブラウザゲームです。インストール不要・登録不要ですぐに遊べます。"
+    />
     <meta name="theme-color" content="#ff9838" />
+    <link rel="canonical" href="https://fukicycle.github.io/mojifuru/" />
     <!-- iOS PWA対応: ホーム画面追加時にステータスバー分を含めフルスクリーン表示にする -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="もじふる" />
-    <title>もじふる</title>
+    <title>もじふる | ひらがなを集めて単語をつくるブラウザゲーム</title>
+
+    <!-- Open Graph / Twitter Card(SNSシェア時の表示、および検索結果の補助情報として) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="もじふる" />
+    <meta property="og:title" content="もじふる | ひらがなを集めて単語をつくるブラウザゲーム" />
+    <meta
+      property="og:description"
+      content="上から降ってくるひらがなをタップして集め、制限時間内に単語を作ってスコアを競う無料のブラウザゲーム。インストール不要・登録不要ですぐに遊べます。"
+    />
+    <meta property="og:url" content="https://fukicycle.github.io/mojifuru/" />
+    <meta property="og:image" content="https://fukicycle.github.io/mojifuru/pwa-512.png" />
+    <meta property="og:locale" content="ja_JP" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="もじふる | ひらがなを集めて単語をつくるブラウザゲーム" />
+    <meta
+      name="twitter:description"
+      content="上から降ってくるひらがなをタップして集め、制限時間内に単語を作ってスコアを競う無料のブラウザゲーム。"
+    />
+    <meta name="twitter:image" content="https://fukicycle.github.io/mojifuru/pwa-512.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "もじふる",
+        "url": "https://fukicycle.github.io/mojifuru/",
+        "description": "上から降ってくるひらがなをタップして集め、制限時間内に単語を作ってスコアを競う無料のブラウザゲーム。",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Any (Webブラウザ)",
+        "inLanguage": "ja",
+        "image": "https://fukicycle.github.io/mojifuru/pwa-512.png",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "JPY"
+        }
+      }
+    </script>
     <script>
       // public/404.html でクエリ文字列に退避された元のパスを復元する
       // (GitHub PagesでSPAのルーティングを成立させるための対になる処理)。
