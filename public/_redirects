@@ -1,0 +1,4 @@
+# Cloudflare Pages専用のSPAルーティング設定(GitHub Pagesはこのファイルを解釈しないため無視される)。
+# public/404.html のリダイレクト対策はリポジトリ名セグメント(/mojifuru/)を前提にしており
+# ルート配下配信のCloudflare Pagesでは機能しないため、代わりにこちらでindex.htmlへフォールバックする。
+/* /index.html 200

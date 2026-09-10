@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://fukicycle.github.io/mojifuru/sitemap.xml
+Sitemap: https://mojifuru.pages.dev/sitemap.xml

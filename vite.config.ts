@@ -8,8 +8,10 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 
 // https://vite.dev/config/
 export default defineConfig({
-  // GitHub Pages(https://<user>.github.io/mojifuru/)でのプロジェクトページ配信を想定
-  base: '/mojifuru/',
+  // GitHub Pages(https://<user>.github.io/mojifuru/)ではリポジトリ名配下、
+  // Cloudflare Pages(ビルド時に自動セットされるCF_PAGES環境変数で判定)ではルート配下に配信されるため、
+  // ビルド環境に応じてbaseを切り替える。
+  base: process.env.CF_PAGES ? '/' : '/mojifuru/',
   // ホーム画面フッターにバージョン表示するため、package.jsonのversionをビルド時に埋め込む
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
