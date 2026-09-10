@@ -46,6 +46,11 @@ export default defineConfig({
         // dict.dawg / wordlist.json はビルド生成物で標準拡張子外・数MB規模のため明示的に対象化
         globPatterns: ['**/*.{js,css,html,svg,png,ico,json,dawg}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        // navigateFallback(既定値'index.html')はnavigateFallbackDenylist未設定だと
+        // 拡張子付きパスへの直接アクセス(例: /sitemap.xml, /robots.txt)まで
+        // SPAフォールバックとしてindex.htmlにすり替えてしまう(過去の実バグ)。
+        // アプリのルートは拡張子を持たないため、拡張子付きパスのみ除外すれば十分。
+        navigateFallbackDenylist: [/\.[^/?]+$/],
       },
     }),
   ],
