@@ -55,6 +55,7 @@ export interface GameSession {
   collectLetter: (letterId: string, char: string) => void;
   confirmWord: () => void;
   clearWord: () => void;
+  removeLastChar: () => void;
 }
 
 export function useGameSession(options: UseGameSessionOptions): GameSession {
@@ -168,7 +169,20 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
     [claimLetter, currentWord.length],
   );
 
-  const clearWord = useCallback(() => setCurrentWord(''), []);
+  const clearWord = useCallback(() => {
+    setCurrentWord((w) => {
+      if (w.length > 0) playSfx('clearAll');
+      return '';
+    });
+  }, []);
+
+  const removeLastChar = useCallback(() => {
+    setCurrentWord((w) => {
+      if (w.length === 0) return w;
+      playSfx('deleteChar');
+      return w.slice(0, -1);
+    });
+  }, []);
 
   const confirmWord = useCallback(() => {
     if (!dawg || finishedRef.current || currentWord.length === 0) return;
@@ -205,6 +219,7 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       collectLetter,
       confirmWord,
       clearWord,
+      removeLastChar,
     }),
     [
       remainingSeconds,
@@ -218,6 +233,7 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
       collectLetter,
       confirmWord,
       clearWord,
+      removeLastChar,
     ],
   );
 }

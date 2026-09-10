@@ -294,6 +294,98 @@ button {
   }
 }
 
+/* ===== リリースノート(アップデート後の初回起動でだけ表示) ===== */
+
+.release-notes-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(74, 63, 77, 0.45);
+  animation: release-notes-fade-in 0.2s ease-out;
+}
+
+.release-notes-panel {
+  width: 100%;
+  max-width: 340px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-panel);
+  border-radius: 24px;
+  padding: 24px 20px 20px;
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+  animation: release-notes-pop-in 0.22s ease-out;
+}
+
+.release-notes-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+}
+
+.release-notes-list li {
+  position: relative;
+  padding: 10px 14px 10px 32px;
+  background: #fff3e6;
+  border-radius: 14px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.release-notes-list li::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--color-orange-strong);
+}
+
+.release-notes-list li:nth-child(3n + 2)::before {
+  background: var(--color-magenta-strong);
+}
+
+.release-notes-list li:nth-child(3n)::before {
+  background: var(--color-aqua-strong);
+}
+
+@keyframes release-notes-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes release-notes-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* ===== ゲーム画面 ===== */
 
 /*
@@ -840,23 +932,96 @@ button {
   font-size: 15px;
 }
 
+/*
+ * 確定ボタンとクリアボタンが上下に並んでいると、画面を見ずにタップしたときの
+ * 上下のズレで意図せずクリアしてしまう事故が起きやすい。左右に分けて配置し、
+ * どちらも大きなタップ領域を確保することで誤タップを防ぐ。
+ */
 .word-controls {
   flex-shrink: 0;
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.word-controls .button {
+  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 2px;
 }
 
 .word-controls .button--confirm {
-  width: 100%;
+  flex: 1.3;
   padding: 18px 16px;
   font-size: 20px;
 }
 
-.word-controls .button--clear-all {
-  padding: 8px 20px;
-  font-size: 13px;
+.word-controls .button--delete-char {
+  flex: 1;
+  padding: 14px 12px;
+  font-size: 15px;
+  border-width: 2px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.button--delete-char span:first-child {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.button--delete-char-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 1文字消す/ぜんぶクリアを色と動きで区別する(音でも区別: deleteChar / clearAll) */
+.button--delete-char--flash-delete {
+  background: var(--color-orange-strong);
+  color: white;
+  border-color: var(--color-orange-strong);
+}
+
+.button--delete-char--flash-clear {
+  background: var(--color-magenta-strong);
+  color: white;
+  border-color: var(--color-magenta-strong);
+  animation: delete-char-clear-pulse 0.26s ease;
+}
+
+@keyframes delete-char-clear-pulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.current-word-slots--flash-delete {
+  box-shadow: inset 0 0 0 3px var(--color-orange-strong);
+}
+
+.current-word-slots--flash-clear {
+  box-shadow: inset 0 0 0 3px var(--color-magenta-strong);
+  animation: word-slots-clear-pulse 0.26s ease;
+}
+
+@keyframes word-slots-clear-pulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* ===== 結果画面 ===== */

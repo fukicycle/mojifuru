@@ -11,6 +11,7 @@ import LicensePage from './components/LicensePage';
 import RoomLobbyScreen from './components/RoomLobbyScreen';
 import RoomResultScreen from './components/RoomResultScreen';
 import UpdateNotice from './components/UpdateNotice';
+import ReleaseNotesDialog from './components/ReleaseNotesDialog';
 
 /** react-router-dom側のルート遷移(履歴API)はページ再読み込みを伴わないため、GA4のpage_viewを都度手動送信する */
 function AnalyticsTracker() {
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/room/:roomId/result" element={<RoomResultScreen />} />
           </Routes>
           <UpdateNotice />
+          <ReleaseNotesDialog />
         </div>
       </BrowserRouter>
     </GameProvider>

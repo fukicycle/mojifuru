@@ -191,6 +191,40 @@ export default function GameScreen({ mode }: GameScreenProps) {
     setFeedbackKey((k) => k + 1);
   }
 
+  // 「1文字消す」ボタンは1秒以内に連続でタップされたら「ぜんぶクリア」として扱う。
+  // ネイティブのdblclickはclick起点で反応が遅れるため使わず、pointerdown同士の間隔を自前で測る。
+  const DOUBLE_TAP_CLEAR_MS = 1000;
+  const lastDeleteTapRef = useRef(0);
+  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [wordFlash, setWordFlash] = useState<'delete' | 'clear' | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (flashTimeoutRef.current !== null) clearTimeout(flashTimeoutRef.current);
+    };
+  }, []);
+
+  const triggerWordFlash = (kind: 'delete' | 'clear') => {
+    if (flashTimeoutRef.current !== null) clearTimeout(flashTimeoutRef.current);
+    setWordFlash(kind);
+    flashTimeoutRef.current = setTimeout(() => setWordFlash(null), 260);
+  };
+
+  const handleDeleteOrClear = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!session.currentWord) return;
+    const now = Date.now();
+    if (now - lastDeleteTapRef.current < DOUBLE_TAP_CLEAR_MS) {
+      lastDeleteTapRef.current = 0;
+      session.clearWord();
+      triggerWordFlash('clear');
+    } else {
+      lastDeleteTapRef.current = now;
+      session.removeLastChar();
+      triggerWordFlash('delete');
+    }
+  };
+
   const takenLetters = mode === 'room' ? room?.takenLetters : undefined;
   const visibleFallingLetters =
     mode === 'room' && takenLetters
@@ -381,7 +415,11 @@ export default function GameScreen({ mode }: GameScreenProps) {
       </div>
 
       <div className="current-word-bar">
-        <div className={`current-word-slots current-word-slots--${wordHeatClass(session.currentWord.length)}`}>
+        <div
+          className={`current-word-slots current-word-slots--${wordHeatClass(session.currentWord.length)} ${
+            wordFlash ? `current-word-slots--flash-${wordFlash}` : ''
+          }`}
+        >
           {session.currentWord ? (
             [...session.currentWord].map((ch, i) => (
               <span key={i} className={`letter-chip letter-chip--${colorForChar(ch)}`}>
@@ -396,6 +434,17 @@ export default function GameScreen({ mode }: GameScreenProps) {
 
       <div className="word-controls">
         <button
+          className={`button button--ghost button--delete-char ${
+            wordFlash ? `button--delete-char--flash-${wordFlash}` : ''
+          }`}
+          disabled={!session.currentWord}
+          onPointerDown={handleDeleteOrClear}
+          aria-label="1文字消す(1秒以内にもう一度押すとぜんぶクリア)"
+        >
+          <span aria-hidden="true">⌫</span>
+          <span className="button--delete-char-label">1文字消す</span>
+        </button>
+        <button
           className="button button--primary button--confirm"
           disabled={!canConfirm}
           onPointerDown={(e) => {
@@ -406,16 +455,6 @@ export default function GameScreen({ mode }: GameScreenProps) {
           }}
         >
           この単語で確定
-        </button>
-        <button
-          className="button button--ghost button--clear-all"
-          disabled={!session.currentWord}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            if (session.currentWord) session.clearWord();
-          }}
-        >
-          ぜんぶクリア
         </button>
       </div>
     </div>

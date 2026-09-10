@@ -213,6 +213,8 @@ export type SfxName =
   | 'confirmGrandBonus'
   | 'confirmUnregistered'
   | 'claimFailed'
+  | 'deleteChar'
+  | 'clearAll'
   | 'countdownTick'
   | 'countdownGo'
   | 'timerUrgent'
@@ -253,6 +255,18 @@ export function playSfx(name: SfxName): void {
       break;
     case 'claimFailed':
       playTones([{ freq: 180, startOffset: 0, duration: 0.1, type: 'square', gain: 0.09 }]);
+      break;
+    case 'deleteChar':
+      // 1文字だけ消える軽い音。「ぜんぶクリア」との違いが分かるよう単発・短めにする
+      playTones([{ freq: 340, startOffset: 0, duration: 0.07, type: 'triangle', gain: 0.14 }]);
+      break;
+    case 'clearAll':
+      // 3音の下降で「まとめて消えた」感を出し、deleteChar(単発)と明確に区別する
+      playTones([
+        { freq: 420, startOffset: 0, duration: 0.08, type: 'sawtooth', gain: 0.16 },
+        { freq: 300, startOffset: 0.06, duration: 0.08, type: 'sawtooth', gain: 0.16 },
+        { freq: 180, startOffset: 0.12, duration: 0.18, type: 'sawtooth', gain: 0.18 },
+      ]);
       break;
     case 'countdownTick':
       playTones([{ freq: 440, startOffset: 0, duration: 0.09, type: 'sine', gain: 0.16 }]);
