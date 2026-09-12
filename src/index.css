@@ -28,6 +28,15 @@
    */
   --canvas-max-height: 900px;
 
+  /*
+   * iOS PWA(standalone)ではマルチタスク復帰などをきっかけに、WebKit側の
+   * ビューポート計算がズレたまま100dvhが再計算されず、下部に余白が残る
+   * 未解決の既知バグがある。App.tsx側でvisualViewportの実測値をpx単位で
+   * 上書きし、復帰系イベントのたびに再計算を強制することで頻度を下げる
+   * (根絶はできない)。JS未実行時・非対応環境向けの初期値として100dvhを既定にする。
+   */
+  --app-vh: 100dvh;
+
   color-scheme: light;
   color: var(--text);
   background: var(--bg);
@@ -55,7 +64,7 @@ html {
 
 body {
   margin: 0;
-  height: 100dvh;
+  height: var(--app-vh);
   overflow: hidden;
   overscroll-behavior: none;
   background: var(--bg);
@@ -254,7 +263,7 @@ button {
 .update-notice {
   position: fixed;
   left: 50%;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 1000;
   display: flex;

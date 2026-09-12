@@ -32,6 +32,37 @@ export default function App() {
     return () => document.removeEventListener('contextmenu', handler);
   }, []);
 
+  useEffect(() => {
+    // iOS PWA(standalone)ではマルチタスク復帰後などにWebKitが100dvhを
+    // 再計算しないままになる既知バグがあるため、visualViewportの実測値で
+    // --app-vh を上書きして復帰のたびに強制的に再計算させる(index.css参照)。
+    const visualViewport = window.visualViewport;
+    let rafId = 0;
+
+    const applyHeight = () => {
+      if (document.visibilityState === 'hidden') return;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const height = visualViewport?.height ?? window.innerHeight;
+        document.documentElement.style.setProperty('--app-vh', `${height}px`);
+      });
+    };
+
+    applyHeight();
+    visualViewport?.addEventListener('resize', applyHeight);
+    window.addEventListener('pageshow', applyHeight);
+    window.addEventListener('focus', applyHeight);
+    document.addEventListener('visibilitychange', applyHeight);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      visualViewport?.removeEventListener('resize', applyHeight);
+      window.removeEventListener('pageshow', applyHeight);
+      window.removeEventListener('focus', applyHeight);
+      document.removeEventListener('visibilitychange', applyHeight);
+    };
+  }, []);
+
   return (
     <GameProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
