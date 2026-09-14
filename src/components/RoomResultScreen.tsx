@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { leaveRoom, resetOwnRoundState, restartRoom, subscribeRoom, type Room } from '../firebase/room';
 import { roundHistoryKey } from '../firebase/roomHistory';
 import { useGameContext } from '../context/GameContext';
-import { signInAnonymouslyOnce } from '../firebase/config';
+import { ensureSignedIn } from '../firebase/config';
 import { useRoomHistory } from '../hooks/useRoomHistory';
 import { rememberRoom } from '../storage/recentRooms';
 import { rankRoundPlayers, type RoundPlayerRecord } from '../game/roomStats';
@@ -46,7 +46,7 @@ export default function RoomResultScreen() {
 
   useEffect(() => {
     if (!firebaseEnabled) return;
-    signInAnonymouslyOnce().then(setUid);
+    ensureSignedIn().then(setUid);
   }, [firebaseEnabled]);
 
   useEffect(() => {

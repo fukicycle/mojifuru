@@ -5,7 +5,7 @@ import { type Analytics, isSupported as isAnalyticsSupported, getAnalytics, logE
 
 /**
  * Firebase設定。バックエンドサーバーを持たない構成のため、
- * 認証・データ永続化・対戦同期はすべてFirebase(Anonymous Auth + RTDB)で完結させる。
+ * 認証・データ永続化・対戦同期はすべてFirebase(Anonymous Auth + 任意のGoogle連携 + RTDB)で完結させる。
  *
  * .env.local に VITE_FIREBASE_* を設定して使う(.env.example 参照)。
  * 未設定の場合、対戦モード・ランキングは無効化され、ひとりで遊ぶモードのみ動作する。
@@ -83,19 +83,24 @@ export function logAnalyticsPageView(pagePath: string): void {
 
 let anonymousSignInPromise: Promise<string> | null = null;
 
-/** 匿名認証でサインインし、uidを返す(既にサインイン済みなら即座に返す) */
-export function signInAnonymouslyOnce(): Promise<string> {
+/**
+ * サインイン済みならそのuidを、未サインインなら匿名認証してそのuidを返す。
+ *
+ * 保存済みのログイン状態は起動直後に非同期で復元されるため、`authStateReady` を待ってから
+ * currentUserを見る。待たずに `signInAnonymously` を呼ぶと、Google連携済みのユーザーを
+ * 捨てて新しい匿名ユーザーに置き換えてしまう。
+ * uid自体はキャッシュしない(タイトル画面でGoogleアカウントへ切り替えるとuidが変わるため)。
+ */
+export async function ensureSignedIn(): Promise<string> {
+  const auth = getFirebaseAuth();
+  await auth.authStateReady();
+  if (auth.currentUser) return auth.currentUser.uid;
   if (!anonymousSignInPromise) {
-    anonymousSignInPromise = new Promise((resolve, reject) => {
-      const auth = getFirebaseAuth();
-      if (auth.currentUser) {
-        resolve(auth.currentUser.uid);
-        return;
-      }
-      signInAnonymously(auth)
-        .then((cred) => resolve(cred.user.uid))
-        .catch(reject);
-    });
+    anonymousSignInPromise = signInAnonymously(auth)
+      .then((cred) => cred.user.uid)
+      .finally(() => {
+        anonymousSignInPromise = null;
+      });
   }
   return anonymousSignInPromise;
 }

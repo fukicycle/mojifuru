@@ -21,7 +21,7 @@ import {
   type Room,
 } from '../firebase/room';
 import { archiveRoundResult } from '../firebase/roomHistory';
-import { signInAnonymouslyOnce } from '../firebase/config';
+import { ensureSignedIn } from '../firebase/config';
 import { beginGameAudio, endGameAudio, playSfx } from '../audio/sfx';
 import { colorForChar } from './chipColors';
 
@@ -126,7 +126,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
   useEffect(() => {
     if (mode !== 'room' || !roomId || !firebaseEnabled) return;
     let unsubscribe: (() => void) | undefined;
-    signInAnonymouslyOnce().then((uid) => {
+    ensureSignedIn().then((uid) => {
       uidRef.current = uid;
       unsubscribe = subscribeRoom(roomId, setRoom, (error) =>
         setSyncError(`ルームの同期に失敗しました: ${error.message}`),

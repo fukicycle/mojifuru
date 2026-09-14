@@ -8,7 +8,7 @@
 
 - フロントエンド:React 19 + TypeScript + Vite 8(ルーティングは react-router-dom 7)
 - ホスティング:GitHub Pages(`.github/workflows/deploy.yml` によるActionsデプロイ、`base: '/mojifuru/'`)
-- リアルタイム同期・データ永続化:Firebase Realtime Database(Anonymous Auth)。**任意**で、未設定でも「ひとりで遊ぶ」は動作する
+- リアルタイム同期・データ永続化:Firebase Realtime Database(Anonymous Auth + 任意のGoogle連携)。**任意**で、未設定でも「ひとりで遊ぶ」は動作する
 - PWA:`vite-plugin-pwa`(generateSW / `registerType: 'prompt'`)。辞書データも事前キャッシュしオフライン起動可能
 - テスト:Vitest(jsdom)、Lint:oxlint
 - サーバーサイドロジックは一切持たない(Cloud Functions等も使わない)
@@ -38,13 +38,15 @@ mojifuru/
 │   │   ├── nameGenerator.ts       # デフォルトプレイヤー名の生成
 │   │   └── *.test.ts              # 各モジュールに隣接して配置
 │   ├── firebase/
-│   │   ├── config.ts              # 初期化・匿名認証・isFirebaseConfigured()
+│   │   ├── config.ts              # 初期化・ensureSignedIn(匿名認証)・isFirebaseConfigured()
+│   │   ├── account.ts             # Googleアカウント連携(linkWithPopup)・切り替え・ログアウト
 │   │   ├── room.ts                # ルーム作成/参加/開始/再戦/文字の排他取得
 │   │   ├── roomHistory.ts         # 戦績(ラウンド記録)の保存・購読
 │   │   ├── leaderboard.ts         # スコア書き込み・取得(JST基準の期間キー)
 │   │   └── wordCandidates.ts      # 未登録語の収集
 │   ├── hooks/useGameSession.ts    # 上記の純粋関数をReactに配線するゲームループ
 │   ├── hooks/useRoomHistory.ts    # 戦績の購読をReactに配線するフック
+│   ├── hooks/useAuthAccount.ts    # サインイン状態の購読(匿名認証は走らせない)
 │   ├── context/GameContext.tsx    # 辞書読み込み状態・プレイヤー名・音設定・isPlaying
 │   ├── audio/sfx.ts               # Web Audio合成の効果音
 │   ├── storage/recentRooms.ts     # さいきん入ったルーム(端末のみ・localStorage)
@@ -65,7 +67,7 @@ mojifuru/
 
 | パス | 画面 |
 | --- | --- |
-| `/` | タイトル(なまえ入力・ソロ開始・ルーム作成/参加・各種リンク・バージョン表示) |
+| `/` | タイトル(なまえ入力・ソロ開始・ルーム作成/参加・Googleでつづける・各種リンク・バージョン表示) |
 | `/game` | ソロプレイ |
 | `/result` | ソロの結果・ランキング送信 |
 | `/leaderboard` | デイリー/マンスリー/全期間ランキング |
@@ -159,6 +161,19 @@ mojifuru/
 - ルームを使い回すと、終わったラウンドの `startAt` が残ったルームに入り直す場面が出る。そのままプレイ画面へ送ると開始直後に時間切れ→結果画面に弾かれ、**0点の記録が戦績に混ざる**ため、ロビーからの遷移は `isRoundLive` が真のときだけにする
 - `takenLetters` はラウンドをまたいで溜まり続け、購読する全クライアントが受信することになるため、`startRoom` / `restartRoom` で毎回捨てる(前ラウンドのidは `idPrefix` が違うので参照されない)
 
+## アカウント(認証)
+
+- uidはFirebase Authが発行し、RTDBのデータ(`leaderboard/*/{uid}`・`roomHistory/.../players/{uid}`)とルールはすべてuidで本人を判定する
+- 匿名認証は**必要になった時点で**走らせる(ルーム作成/参加・ランキング送信・ルーム系の画面)。アクセスしただけ・「ひとりで遊ぶ」だけではユーザーを作らない
+- uidの取得は必ず `ensureSignedIn()` を使う。`authStateReady()` を待ってから `currentUser` を見ること。待たずに `signInAnonymously` を呼ぶと、Google連携済みのユーザーが新しい匿名ユーザーに置き換わる。uidをキャッシュしない(アカウント切り替えで変わるため)
+- 引き継ぎ手段は**「Googleでつづける」のみ**・**任意**(タイトル画面のボタン。初回の選択画面は出さない)
+  - 匿名ユーザーは `linkWithPopup` で連携する。uidが変わらないので、それまでの記録がそのまま残る
+  - そのGoogleアカウントが別のuidに結びついていたら(`auth/credential-already-in-use`)、確認ダイアログを出してから `signInWithCredential` で切り替える。このブラウザの匿名uidの記録は引き継がれない
+  - **ポップアップ方式のみ**。リダイレクト方式はauthDomainと配信元のドメインが違うと、サードパーティストレージ制限で結果を受け取れないため使わない
+  - ポップアップを開くボタンは `pointerdown` ではなく `click` で受ける(タッチのpointerdownはユーザー操作とみなされず、ポップアップがブロックされる。操作方針の例外)
+- なまえ・さいきんのルーム・音設定は今もlocalStorage(端末ごと)で、アカウント連携では引き継がれない
+- Firebaseコンソールで「Google」プロバイダの有効化と、配信ドメインの承認済みドメインへの追加が必要
+
 ## セキュリティルールの必須要件(`firebase.rules.json`)
 
 - ルート既定は `.read`/`.write` ともに false。個別に許可する
@@ -177,6 +192,7 @@ mojifuru/
 - レイアウト:モバイルファースト。ゲームキャンバス最大幅420px(`--canvas-max-width`)、PCでは左右レターボックス。縦も900px上限だが、これは幅480px以上のときのみ適用(スマホ実機で上下に背景の段差が出るため)
 - ページ全体のスクロールは禁止(`html`/`body` を `overflow: hidden`)。スクロールが必要な画面は内側のコンテナだけに `overflow-y: auto` を持たせる
 - 操作は `click` ではなく `pointerdown` で確定させる(反応の遅さを避けるため)
+  - 例外:画面の上に重なって**閉じると消える**ダイアログ(`ReleaseNotesDialog` など)は `click` で閉じる。`pointerdown` で消すと同じタップの `click` が下のボタンに届き、タイトル画面の「ひとりで遊ぶ」が押されてゲームが即時開始される(過去の実バグ)
 - **画面共通の飾り**:全画面をアイコン(丸くてつやのある3色の文字チップ)と同じテイストで揃える。パーツは `src/components/decor.tsx`(`DecoChips` 背景の浮遊チップ / `ChipTitle` チップ見出し / `ChipLoader` 読み込み中 / `EmptyChip` 空状態)、器は `.screen--decorated` と `.panel`(半透明カード)。飾りは必ず `pointer-events: none` で操作を妨げないこと。ゲーム画面(`GameScreen`)だけは視認性・パフォーマンス優先で飾りを入れない
 - 文字チップの色決定 `colorForChar` は `src/components/chipColors.ts` に集約(同じ文字は常に同じ色)
 - 開発者ツール対策:F12無効化などの強い制限は不採用。右クリック無効化のみ `App.tsx` で実施
@@ -187,6 +203,9 @@ mojifuru/
 - 和風テイストのビジュアルデザイン(青海波模様、朱色の印鑑ボタン等) → 試作したが不採用。ポップな方向に確定済み
 - F12/開発者ツールの無効化 → 技術的に実効性がないため不採用
 - 効果音の音声ファイル同梱 → Web Audio合成で代替(ライセンス表記・配信サイズの都合)
+- **メールリンク認証**(パスワードなしのメールログイン) → Sparkプランでは送信上限が1日5通(プロジェクト全体)で実用にならないため不採用
+- **Appleログイン・メール+パスワード** → 不要と判断。引き継ぎはGoogleのみ
+- **初回起動時のログイン選択画面** → 認証は遅延実行で、あとからの連携でもuidを保てるため不要。タイトルの任意ボタンのみ
 - **一時ストックスロット**(構成中の単語を保留する仕組み) → 導入せず。収集中の単語欄と「ぜんぶクリア」のみで完結させる
 
 ## 開発コマンド

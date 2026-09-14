@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
-import { signInAnonymouslyOnce } from '../firebase/config';
+import { ensureSignedIn } from '../firebase/config';
 import { useRoomHistory } from '../hooks/useRoomHistory';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { ChipLoader, ChipTitle, DecoChips, EmptyChip } from './decor';
@@ -38,7 +38,7 @@ export default function RoomHistoryScreen() {
 
   useEffect(() => {
     if (!firebaseEnabled) return;
-    signInAnonymouslyOnce().then(setUid, () => setAuthFailed(true));
+    ensureSignedIn().then(setUid, () => setAuthFailed(true));
   }, [firebaseEnabled]);
 
   // 戦績の読み取りには匿名認証が要るため、uidが確定してから購読を始める

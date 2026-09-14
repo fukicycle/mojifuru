@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useRef, useState } from 'react';
 import { useGameContext } from '../context/GameContext';
 import { ChipTitle } from './decor';
 import { notesSince, RELEASE_NOTES, type ReleaseNote } from '../releaseNotes';
@@ -52,8 +52,10 @@ export default function ReleaseNotesDialog() {
   // プレイ中に出ると操作の妨げになるため、UpdateNoticeと同様プレイが終わるまで表示だけ保留する
   if (notes.length === 0 || isPlaying) return null;
 
-  const handleClose = (e: ReactPointerEvent) => {
-    e.preventDefault();
+  // pointerdownで閉じると、同じタップのclickがダイアログの消えた下のボタン
+  // (タイトル画面の「ひとりで遊ぶ」など、clickで受けている)に届いてしまい、
+  // ゲームが即時開始される。操作方針の例外としてclickで閉じる。
+  const handleClose = () => {
     saveLastSeenVersion(__APP_VERSION__);
     setNotes([]);
   };
@@ -76,7 +78,7 @@ export default function ReleaseNotesDialog() {
             </ul>
           </div>
         ))}
-        <button className="button button--primary button--block" onPointerDown={handleClose}>
+        <button className="button button--primary button--block" onClick={handleClose}>
           わかった!
         </button>
       </div>

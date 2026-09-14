@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
-import { signInAnonymouslyOnce } from '../firebase/config';
+import { ensureSignedIn } from '../firebase/config';
 import { createRoom, joinRoom, rejoinRoom } from '../firebase/room';
 import { forgetRoom, loadRecentRooms } from '../storage/recentRooms';
+import AccountPanel from './AccountPanel';
 import { DecoChips } from './decor';
 
 /** さいきんのルームに添える日付(「9/14」) */
@@ -31,7 +32,7 @@ export default function TitleScreen() {
     setBusy(true);
     setError(null);
     try {
-      const uid = await signInAnonymouslyOnce();
+      const uid = await ensureSignedIn();
       const roomId = await createRoom(uid, trimmedName);
       navigate(`/room/${roomId}`);
     } catch (err) {
@@ -48,7 +49,7 @@ export default function TitleScreen() {
     setBusy(true);
     setError(null);
     try {
-      const uid = await signInAnonymouslyOnce();
+      const uid = await ensureSignedIn();
       const room = await joinRoom(roomId, uid, trimmedName);
       if (!room) {
         setError('ルームが見つかりませんでした。ルームコードを確認してください。');
@@ -68,7 +69,7 @@ export default function TitleScreen() {
     setBusy(true);
     setError(null);
     try {
-      const uid = await signInAnonymouslyOnce();
+      const uid = await ensureSignedIn();
       await rejoinRoom(roomId, uid, trimmedName);
       navigate(`/room/${roomId}`);
     } catch (err) {
@@ -193,6 +194,8 @@ export default function TitleScreen() {
           </div>
         )}
       </div>
+
+      {firebaseEnabled && <AccountPanel />}
 
       <div className="footer-links">
         <Link to="/wordlist">単語一覧</Link>

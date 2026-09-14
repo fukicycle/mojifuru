@@ -1866,6 +1866,81 @@ button {
   text-decoration: none;
 }
 
+/* Googleアカウント連携(タイトル画面)。任意の機能なので、遊ぶボタンより控えめに置く */
+.account-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 52px;
+  margin-top: 12px;
+}
+
+/* Googleのボタンは白地+Gマークの定番の見た目に寄せる(ブランドガイドライン) */
+.google-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.google-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.google-mark {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.account-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.account-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.account-conflict-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.account-conflict-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: left;
+  color: var(--text);
+}
+
+.account-conflict .button-row {
+  max-width: none;
+}
+
 /* さいきんのルーム(タイトル画面)。ルームコードを覚えておけない問題への受け皿 */
 .recent-rooms {
   display: flex;

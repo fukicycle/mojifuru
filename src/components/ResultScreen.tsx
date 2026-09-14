@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
-import { signInAnonymouslyOnce } from '../firebase/config';
+import { ensureSignedIn, getFirebaseAuth } from '../firebase/config';
 import { submitScore } from '../firebase/leaderboard';
 import type { BonusTier } from '../game/scoring';
 import { ChipTitle, DecoChips } from './decor';
@@ -18,6 +18,8 @@ export default function ResultScreen() {
   // 'kept' は「自己ベストに届かなかった」= 正常終了。エラーとして見せない
   const [submitState, setSubmitState] = useState<'idle' | 'sending' | 'updated' | 'kept' | 'error'>('idle');
   const [bestScore, setBestScore] = useState<number | null>(null);
+  // 自己ベストを更新した匿名ユーザーにだけ、記録を引き継げることを知らせる(毎回出すとうるさいため)
+  const [anonymous, setAnonymous] = useState(false);
   const submittedRef = useRef(false);
   // プレイ終了間際は「確定」ボタンを連打しがちで、その残り連打がそのまま
   // 同じ画面位置にある「もう一度あそぶ」を誤タップしてしまう事故を防ぐため、
@@ -40,9 +42,10 @@ export default function ResultScreen() {
     setSubmitState('sending');
     (async () => {
       try {
-        const uid = await signInAnonymouslyOnce();
+        const uid = await ensureSignedIn();
         const result = await submitScore(uid, name, lastResult.totalScore);
         setBestScore(result.bestScore);
+        setAnonymous(getFirebaseAuth().currentUser?.isAnonymous ?? false);
         setSubmitState(result.improved ? 'updated' : 'kept');
       } catch {
         setSubmitState('error');
@@ -74,6 +77,11 @@ export default function ResultScreen() {
                 ? '自己ベストはそのままです'
                 : `自己ベストは ${bestScore}点 のままです`)}
             {submitState === 'error' && 'ランキングへの登録に失敗しました'}
+          </p>
+        )}
+        {submitState === 'updated' && anonymous && (
+          <p className="account-hint" style={{ marginTop: 6 }}>
+            タイトルの「Googleでつづける」で、きろくを ほかの端末にも ひきつげます
           </p>
         )}
       </div>

@@ -2,7 +2,7 @@
 
 上から降ってくるひらがな文字をタップして集め、制限時間内に単語を作ってスコアを競うWebゲーム。
 バックエンドサーバーを持たず、React(フロントエンド)+ GitHub Pages(静的ホスティング)+ Firebase
-Realtime Database(Anonymous Auth)のみで完結する構成のPoC実装です。
+Realtime Database(Anonymous Auth + 任意のGoogleログイン)のみで完結する構成のPoC実装です。
 
 詳細な仕様は [`CLAUDE.md`](./CLAUDE.md) / [`mojifuru-design-doc.md`](./mojifuru-design-doc.md) を参照してください。
 
@@ -47,7 +47,9 @@ npm run build
 対戦モード・全体ランキングを有効にするには Firebase プロジェクトが必要です。
 
 1. Firebaseコンソールでプロジェクトを作成
-2. Authentication > Sign-in method で「匿名」を有効化
+2. Authentication > Sign-in method で「匿名」と「Google」を有効化し、
+   Authentication > Settings > 承認済みドメイン に配信先のドメイン(`<user>.github.io`、Cloudflare Pagesのドメインなど)を追加
+   (Googleログインはポップアップ方式。未追加のドメインでは `auth/unauthorized-domain` になる)
 3. Realtime Database を作成し、[`firebase.rules.json`](./firebase.rules.json) をルールとしてデプロイ
    (`firebase deploy --only database`、または Firebase CLI 未導入ならコンソールから手動で貼り付け)
 4. `.env.example` を `.env.local` にコピーし、Firebaseの設定値を入力

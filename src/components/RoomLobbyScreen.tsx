@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { isRoundLive, leaveRoom, startRoom, subscribeRoom, type Room } from '../firebase/room';
 import { useGameContext } from '../context/GameContext';
-import { signInAnonymouslyOnce } from '../firebase/config';
+import { ensureSignedIn } from '../firebase/config';
 import { rememberRoom } from '../storage/recentRooms';
 import { ChipLoader, ChipTitle, DecoChips, EmptyChip } from './decor';
 import { colorForChar } from './chipColors';
@@ -18,7 +18,7 @@ export default function RoomLobbyScreen() {
 
   useEffect(() => {
     if (!firebaseEnabled) return;
-    signInAnonymouslyOnce().then(setUid);
+    ensureSignedIn().then(setUid);
   }, [firebaseEnabled]);
 
   useEffect(() => {
