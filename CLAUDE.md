@@ -51,6 +51,7 @@ mojifuru/
 │   ├── audio/sfx.ts               # Web Audio合成の効果音
 │   ├── storage/recentRooms.ts     # さいきん入ったルーム(端末のみ・localStorage)
 │   ├── workers/wordlistWorker.ts  # wordlist.jsonのfetch+parseをワーカーへ逃がす
+│   ├── viewport.ts                # iOS PWAのビューポート実測(--app-vh / --ios-bottom-shim)
 │   ├── components/                # 各画面(下記ルート参照)
 │   ├── index.css                  # 全画面分のスタイル(CSS変数でデザイントークン管理)
 │   └── App.tsx
@@ -190,12 +191,31 @@ mojifuru/
 - UIコピー:ひらがな中心の平易な文言(例:「この単語で確定」「ぜんぶクリア」)
 - ボーナス表示バッジ:画面上部に常時表示、警告色系(黄〜アンバー)
 - レイアウト:モバイルファースト。ゲームキャンバス最大幅420px(`--canvas-max-width`)、PCでは左右レターボックス。縦も900px上限だが、これは幅480px以上のときのみ適用(スマホ実機で上下に背景の段差が出るため)
-- ページ全体のスクロールは禁止(`html`/`body` を `overflow: hidden`)。スクロールが必要な画面は内側のコンテナだけに `overflow-y: auto` を持たせる
+- ページ全体のスクロールは禁止(`html`/`body` を `overflow: hidden`)。スクロールが必要な画面は内側のコンテナだけに `overflow-y: auto` を持たせる(例外は後述のセーフエリア対応)
 - 操作は `click` ではなく `pointerdown` で確定させる(反応の遅さを避けるため)
   - 例外:画面の上に重なって**閉じると消える**ダイアログ(`ReleaseNotesDialog` など)は `click` で閉じる。`pointerdown` で消すと同じタップの `click` が下のボタンに届き、タイトル画面の「ひとりで遊ぶ」が押されてゲームが即時開始される(過去の実バグ)
 - **画面共通の飾り**:全画面をアイコン(丸くてつやのある3色の文字チップ)と同じテイストで揃える。パーツは `src/components/decor.tsx`(`DecoChips` 背景の浮遊チップ / `ChipTitle` チップ見出し / `ChipLoader` 読み込み中 / `EmptyChip` 空状態)、器は `.screen--decorated` と `.panel`(半透明カード)。飾りは必ず `pointer-events: none` で操作を妨げないこと。ゲーム画面(`GameScreen`)だけは視認性・パフォーマンス優先で飾りを入れない
 - 文字チップの色決定 `colorForChar` は `src/components/chipColors.ts` に集約(同じ文字は常に同じ色)
 - 開発者ツール対策:F12無効化などの強い制限は不採用。右クリック無効化のみ `App.tsx` で実施
+
+## iOS PWAのセーフエリア対応(確定事項)
+
+ホーム画面に追加したiOSのPWAには、**端末・OSバージョン・追加した時点のメタタグによって2通りの挙動**があり、どちらになるかはアプリ側から選べない。両方で破綻しない作りにしてある。
+
+| | 挙動A: WebViewがステータスバーの下から始まる | 挙動B: WebViewが画面全体を覆う |
+| --- | --- | --- |
+| `env(safe-area-inset-top)` | `0px` を返す | 実値を返す |
+| ステータスバーの帯 | **OSが `theme-color` で塗る** | ページの中身が透ける |
+| 起きる不具合 | 帯とアプリの地色が違うと**段差**に見える | レイアウトビューポートだけが短くなり、**画面下端に帯**が残る |
+
+- **地色は1か所で決める**:`--chrome-color`(`src/index.css`)= `.app-shell` の背景 = `index.html` の `<meta name="theme-color">` = `vite.config.ts` の `manifest.theme_color`。**4つは必ず同じ値に保つこと**(挙動Aで帯とアプリが地続きに見えるための条件)
+- **セーフエリアは外側に逃がさず、画面自身の内側に織り込む**。`.screen` の `padding` に `--safe-*` を足し込んでいる(外側に余白を作ると下の階層の背景色が露出して段差になる)。ステータスバーの帯を `body::before` のような別レイヤーで塗るのは**不可**(挙動Aで二重になる)
+- `env()` は直接使わず `--safe-top` / `--safe-right` / `--safe-bottom` / `--safe-left` を経由する。`env()` が `0px` を返す端末があるため、standalone表示のときだけ `--safe-bottom` に下限(`max(12px, env(...))`)を持たせている
+- **下端の帯は実測して塞ぐ**(`src/viewport.ts`)。`screen.height - innerHeight` の差を `--ios-bottom-shim` に入れ、そのぶんだけ `html`/`body` を伸ばす。決め打ちで `calc(100% + env(safe-area-inset-top))` と伸ばすと、ズレていない端末では逆に文書がはみ出す。差が0以下・120pxより大きいときは測定ミスとみなして伸ばさない
+  - 伸ばしている間(`html.ios-bottom-shim`)だけ `overflow: hidden` を解く。残したままだと伸ばしたぶんがビューポート端で切り取られ、帯が戻る。代わりに `viewport.ts` が `scrollY` を0に固定し、プレイ面(`.falling-field`)はこのときだけ `touch-action: none` にして、「ページ全体はスクロールさせない」原則を保つ
+- **画面を覆う要素に `position: fixed` を使わない**。fixedはレイアウトビューポート基準のため、挙動Bでは画面下端に届かない。`.update-notice` と `.release-notes-backdrop` は `.app-shell` 基準の `position: absolute` にしてある
+- `viewport-fit=cover`(`index.html`)が無いと `env(safe-area-inset-*)` は常に0になる。**外さないこと**
+- ⚠️ iOSは `apple-mobile-web-app-status-bar-style` を**ホーム画面に追加した時点の値でキャッシュする**。メタタグを変えた後は一度削除して追加し直さないと反映されないことがある
 
 ## 明示的に不採用となった案(再検討不要)
 
