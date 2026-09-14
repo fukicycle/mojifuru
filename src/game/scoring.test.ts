@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { countTrailingShortStreak, bonusTierForLength, scoreWord, summarizeScore } from './scoring';
+import {
+  countTrailingShortStreak,
+  bonusTierForLength,
+  rescoreWordSequence,
+  scoreWord,
+  summarizeScore,
+} from './scoring';
 
 describe('bonusTierForLength', () => {
   it('4文字以下はボーナスなし', () => {
@@ -74,6 +80,28 @@ describe('countTrailingShortStreak', () => {
   it('4文字以上の単語を挟むとリセットされる', () => {
     const words = [{ length: 2 }, { length: 2 }, { length: 4 }, { length: 3 }];
     expect(countTrailingShortStreak(words)).toBe(1);
+  });
+});
+
+describe('rescoreWordSequence', () => {
+  it('単語の並びだけからプレイ中と同じ点数を再現できる(ダウンコンボ込み)', () => {
+    const words = ['ねこ', 'いぬ', 'ひまわり', 'うし'];
+    const rescored = rescoreWordSequence(words);
+    expect(rescored.map((w) => w.totalPoints)).toEqual([
+      scoreWord('ねこ', 0).totalPoints,
+      scoreWord('いぬ', 1).totalPoints,
+      scoreWord('ひまわり', 2).totalPoints,
+      scoreWord('うし', 0).totalPoints, // 4文字を挟んだのでリセット
+    ]);
+  });
+
+  it('ボーナス段階も復元される', () => {
+    const rescored = rescoreWordSequence(['あいうえお', 'あいうえおかき']);
+    expect(rescored.map((w) => w.bonusTier)).toEqual(['bonus', 'grand-bonus']);
+  });
+
+  it('空配列でも安全に扱える', () => {
+    expect(rescoreWordSequence([])).toEqual([]);
   });
 });
 

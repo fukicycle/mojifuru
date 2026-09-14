@@ -334,6 +334,23 @@ button {
   animation: release-notes-pop-in 0.22s ease-out;
 }
 
+/* 複数バージョンぶんをまとめて出すときの、1バージョンぶんのまとまり */
+.release-notes-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.release-notes-version {
+  margin: 0;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+}
+
 .release-notes-list {
   margin: 0;
   padding: 0;
@@ -1827,4 +1844,334 @@ button {
   font-weight: 700;
   /* screen--center の中央寄せを受けないよう、行内では左揃えに戻す */
   text-align: left;
+}
+
+/* ボタンほど強くない、文字だけのリンク風ボタン(footer-linksと同じ地味さで揃える) */
+.text-link-button {
+  align-self: center;
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.text-link-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: none;
+}
+
+/* さいきんのルーム(タイトル画面)。ルームコードを覚えておけない問題への受け皿 */
+.recent-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.recent-rooms-label {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+}
+
+.recent-room-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recent-room-enter {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(243, 237, 232, 0.85);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-room-enter:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.recent-room-code {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-orange-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-room-date {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.recent-room-history {
+  flex-shrink: 0;
+}
+
+.recent-room-forget {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-soft);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.recent-room-forget:hover {
+  background: rgba(243, 237, 232, 0.9);
+}
+
+/* ===== 戦績(ルームのラウンド記録) =====
+ *
+ * じゅんい表の行をタップすると、そのプレイヤーが組み立てたことばが開く。
+ * ことばはプレイ中と同じ丸い文字チップで見せて、ゲーム画面と地続きの印象にする。
+ */
+.round-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.round-player {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.round-player--self {
+  background: linear-gradient(90deg, rgba(127, 224, 232, 0.22), rgba(127, 224, 232, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(63, 201, 214, 0.35);
+}
+
+.round-player-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 14px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.round-player-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.round-player-score {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--color-magenta-strong);
+}
+
+.round-player-open {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.round-player-caret {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.round-player-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.round-player-empty {
+  margin: 0;
+  padding: 0 12px 10px;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.word-pill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.word-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.word-pill-chips {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+/* プレイ中のletter-chipを、一覧に並べられる大きさまで小さくしたもの */
+.word-chip {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(107, 58, 32, 0.22);
+}
+
+.word-chip--magenta {
+  background: var(--color-magenta-strong);
+}
+.word-chip--orange {
+  background: var(--color-orange-strong);
+}
+.word-chip--aqua {
+  background: var(--color-aqua-strong);
+}
+
+.word-pill-points {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-orange-strong);
+}
+
+.word-pill .tier-tag {
+  margin-left: 0;
+}
+
+.history-round-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.history-round-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px 4px;
+}
+
+.history-round-no {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a6d00;
+  background: rgba(255, 210, 63, 0.35);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.history-round-time {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.totals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.totals-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.totals-row--self {
+  background: linear-gradient(90deg, rgba(127, 224, 232, 0.22), rgba(127, 224, 232, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(63, 201, 214, 0.35);
+}
+
+.totals-body {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.totals-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.totals-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* count-badge は align-self: flex-start のため、行内では中央に戻す */
+.count-badge.totals-wins {
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.totals-sub,
+.totals-best-word {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+.totals-best-word {
+  color: var(--color-orange-strong);
 }

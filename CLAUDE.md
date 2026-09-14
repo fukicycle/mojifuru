@@ -34,16 +34,20 @@ mojifuru/
 │   │   ├── dawg.ts                # DAWGのランタイム表現と読み込み
 │   │   ├── wordValidator.ts       # DAWG検索による単語判定
 │   │   ├── scoring.ts             # 得点計算(指数カーブ + ダウンコンボ)
+│   │   ├── roomStats.ts           # 対戦の戦績(順位付け・通算集計)
 │   │   ├── nameGenerator.ts       # デフォルトプレイヤー名の生成
 │   │   └── *.test.ts              # 各モジュールに隣接して配置
 │   ├── firebase/
 │   │   ├── config.ts              # 初期化・匿名認証・isFirebaseConfigured()
 │   │   ├── room.ts                # ルーム作成/参加/開始/再戦/文字の排他取得
+│   │   ├── roomHistory.ts         # 戦績(ラウンド記録)の保存・購読
 │   │   ├── leaderboard.ts         # スコア書き込み・取得(JST基準の期間キー)
 │   │   └── wordCandidates.ts      # 未登録語の収集
 │   ├── hooks/useGameSession.ts    # 上記の純粋関数をReactに配線するゲームループ
+│   ├── hooks/useRoomHistory.ts    # 戦績の購読をReactに配線するフック
 │   ├── context/GameContext.tsx    # 辞書読み込み状態・プレイヤー名・音設定・isPlaying
 │   ├── audio/sfx.ts               # Web Audio合成の効果音
+│   ├── storage/recentRooms.ts     # さいきん入ったルーム(端末のみ・localStorage)
 │   ├── workers/wordlistWorker.ts  # wordlist.jsonのfetch+parseをワーカーへ逃がす
 │   ├── components/                # 各画面(下記ルート参照)
 │   ├── index.css                  # 全画面分のスタイル(CSS変数でデザイントークン管理)
@@ -69,7 +73,8 @@ mojifuru/
 | `/license` | ライセンス表記(**必須実装**) |
 | `/room/:roomId` | 対戦ロビー(ルームコード共有・開始待ち) |
 | `/room/:roomId/play` | 対戦プレイ |
-| `/room/:roomId/result` | 対戦結果・再戦 |
+| `/room/:roomId/result` | 対戦結果・再戦(このラウンド/つうさん/きろく の3タブ) |
+| `/room/:roomId/history` | ルームの戦績(ルームコードだけで閲覧可。ルーム消滅後も残る) |
 
 `UpdateNotice` は全画面共通で、SW更新検知時に「今すぐ更新」を出す(プレイ中は `isPlaying` により表示を保留)。
 
@@ -115,12 +120,18 @@ mojifuru/
   ├─ players/{uid}: { name, score, wordsFormed?: string[] }  # RTDBは空配列を保持しないためwordsFormedは省略されうる
   └─ takenLetters/{letterId}: uid
 
+/roomHistory/{roomId}/r{startAt}     # ラウンドのキーは開始時刻(全端末で一致する値)
+  ├─ startedAt: <number>
+  ├─ finishedAt: <serverTimestamp>
+  └─ players/{uid}: { name, score, words?: string[] }
+
 /wordCandidates/{word}: { count, firstSeenAt }
 ```
 
 - ランキングはデイリー・マンスリー・全期間の3種類。日付/月の境界はJST(UTC+9)固定で計算する(タイムゾーンライブラリは使わない)
 - 各期間ごとに独立して「自己ベストのみ更新」を行う(古いノードの掃除はバックエンドがないため行わない)
 - 全員が退出して `players` が空になったら、購読中のクライアントがルームごと削除する。タブを閉じた場合は `onDisconnect` で自分のエントリが消える
+- ただし**ルームコードは使い回せる**。`rejoinRoom` はルームが無ければ同じコードで作り直すため、ユーザーから見れば「解散したルームにまた集まれる」。戦績は `roomHistory/{roomId}` 側に残るので作り直しても引き継がれる(使われないルームを残さずにコードだけ永続させるための設計)
 
 ## 対戦モードの同期方針(重要)
 
@@ -131,12 +142,30 @@ mojifuru/
 - 参加人数に応じて1回のスポーンで降らせる文字数をスケールする(`lettersPerSpawn`、最大6)
 - 文字の取得は `takenLetters` へのトランザクションによる早い者勝ち。失敗時は「ほかのプレイヤーが先にとりました」と明示する(無反応に見せない)
 
+## 戦績(ルームのラウンド記録)
+
+- `rooms/{roomId}` は全員が退出すると消えるため、戦績は `/roomHistory/{roomId}` に**別ノード**として積む(消さない)。対戦が終わったあとでも**ルームコードだけ**で見返せるようにするための構成
+- ラウンドのキーは `r{startAt}`。startAtはサーバータイムスタンプで全端末一致するため追加の同期が要らず、先頭の `r` で「数値キーを配列とみなすRTDBの挙動」も避けている
+- 書き込みはラウンド終了時(`GameScreen` の `handleFinish`)に各クライアントが**自分のぶんだけ**行う(ルール上 `players/{uid}` は本人しか書けない)。保存に失敗しても結果表示は止めない
+- 保存するのは「なまえ・とくてん・成立した単語の並び」だけ。1単語ごとの点数・ボーナス段階は**保存せず**、`rescoreWordSequence`(純粋関数)で並びから再計算する(ダウンコンボ込みでプレイ中と完全に一致する)
+- 集計は `src/game/roomStats.ts`(純粋関数)。同点は同順位、全員0点のラウンドには勝者を立てない
+- 結果画面・戦績画面は行をタップするとそのプレイヤーの成立単語が開く(相手がどんなことばを作ったか見られる)。ことばはプレイ中と同じ丸い文字チップで見せる
+- 結果画面から戦績へは**画面遷移させずタブで切り替える**。遷移すると再戦の検知(startAtの変化)から外れて置いていかれるため
+
+## ルームの使い回し
+
+- ルームコードはランダム6文字で覚える手立てがないため、入ったルームは `src/storage/recentRooms.ts`(localStorage・端末のみ・最大5件)に控え、タイトル画面の「さいきんのルーム」から入り直せるようにする。サーバー側にユーザーごとのルーム一覧は作らない(匿名認証のuidも端末ごとで、持続性はlocalStorageと変わらないため)
+- コード入力の「参加」は `joinRoom`(存在しなければエラー=打ち間違いを検出)、さいきんのルームからは `rejoinRoom`(無ければ作り直す)と使い分ける
+- ルームを使い回すと、終わったラウンドの `startAt` が残ったルームに入り直す場面が出る。そのままプレイ画面へ送ると開始直後に時間切れ→結果画面に弾かれ、**0点の記録が戦績に混ざる**ため、ロビーからの遷移は `isRoundLive` が真のときだけにする
+- `takenLetters` はラウンドをまたいで溜まり続け、購読する全クライアントが受信することになるため、`startRoom` / `restartRoom` で毎回捨てる(前ラウンドのidは `idPrefix` が違うので参照されない)
+
 ## セキュリティルールの必須要件(`firebase.rules.json`)
 
 - ルート既定は `.read`/`.write` ともに false。個別に許可する
 - `players/{uid}`:`auth.uid == $uid` のときのみ書き込み可。`score` は1回の増加量を200以下に制限(`MAX_SCORE_INCREMENT_PER_WORD` と同値に保つこと)
 - `takenLetters/{letterId}`:`!data.exists()` のときのみ書き込み可(早い者勝ちの排他制御)。値は `auth.uid` に限定
 - `leaderboard`:読み取りは公開、書き込みは本人のみ。`bestScore` は増加のみ、`updatedAt` は `now` のみ許可、`name` は20文字以内
+- `roomHistory/{roomId}`:読み取りは `auth != null`(ルームコードを知っていれば誰でも見られる)。書き込みは**葉ごとに**許可し、`players/{uid}` は本人のみ・`score` は20000以下(`MAX_ROUND_SCORE` と同値に保つこと)・`finishedAt` は `now` のみ。`$roundId` に `.write` を置くと配下すべてが書けてしまい、本人限定が効かなくなるので置かないこと
 - `updatedAt === now` の制約があるため、**自己ベスト未満のときに同じ値を書き戻すと permission denied になる**。`submitScore` はその場合トランザクションを中止(`undefined` を返す)し、UIでも「登録失敗」ではなく「自己ベストは◯点のまま」と伝える(過去の実バグ)
 
 ## デザイン仕様(確定事項・変更しないこと)

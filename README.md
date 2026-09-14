@@ -86,7 +86,7 @@ Firebaseプロジェクトで Google Analytics を有効化している場合、
 ```
 src/
 ├── game/          文字の降下・DAWG判定・得点計算(純粋関数)
-├── firebase/      Firebase設定・ルーム同期・ランキング・未登録語収集
+├── firebase/      Firebase設定・ルーム同期・ランキング・戦績・未登録語収集
 ├── hooks/         useGameSession(上記の純粋関数をReactに配線するフック)
 ├── context/       辞書読み込み状態・プレイヤー名などのグローバル状態
 └── components/    各画面(タイトル/ゲーム/結果/一覧/ランキング/ライセンス/対戦ルーム)

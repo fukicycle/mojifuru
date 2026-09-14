@@ -83,6 +83,43 @@ export async function joinRoom(roomId: string, uid: string, name: string): Promi
 }
 
 /**
+ * さいきん遊んだルームに入り直す。
+ *
+ * ルームは全員が退出した時点で削除される(使われないルームを残さないため)が、
+ * ルームコードそのものは端末に控えてある。同じコードでまた集まれるよう、
+ * ルームが無ければ**同じコードで作り直す**。戦績は `roomHistory/{roomId}` 側に
+ * 残っているため、作り直しても過去のラウンドの記録は引き継がれる。
+ */
+export async function rejoinRoom(roomId: string, uid: string, name: string): Promise<void> {
+  const db = getFirebaseDb();
+  // 2人が同時に入り直しても、ルームを作るのは1人だけになるようトランザクションで行う
+  await runTransaction(ref(db, `rooms/${roomId}`), (current: Room | null) => {
+    if (current) return; // 既にあるならそのまま(中止)
+    return {
+      seed: Math.floor(Math.random() * 2 ** 31),
+      startAt: null,
+      duration: ROOM_DURATION_SECONDS,
+    };
+  });
+  await set(ref(db, `rooms/${roomId}/players/${uid}`), { name, score: 0, wordsFormed: [] } satisfies RoomPlayer);
+  registerLeaveOnDisconnect(roomId, uid);
+}
+
+/**
+ * そのラウンドがまだ進行中か(カウントダウン + 制限時間の内側か)。
+ *
+ * ルームを使い回すようになると、前のラウンドが終わったままの `startAt` が残った
+ * ルームへ入り直す場面が出てくる。それをプレイ画面へ送ってしまうと、開始直後に
+ * 時間切れ→結果画面へ弾かれる(しかも0点の記録が戦績に混ざる)ため、
+ * ロビーで止めて次の開始を待たせるのに使う。
+ */
+export function isRoundLive(room: Room | null, now: number = Date.now()): boolean {
+  if (!room || room.startAt == null) return false;
+  const durationSec = room.duration ?? ROOM_DURATION_SECONDS;
+  return now < room.startAt + (ROOM_COUNTDOWN_SECONDS + durationSec) * 1000;
+}
+
+/**
  * 「やめる」など明示的な退出操作用。onDisconnectの発火(タブを閉じる等)を待たずに
  * 即座に自分のplayersエントリを削除する。
  */
@@ -100,7 +137,9 @@ export async function startRoom(roomId: string): Promise<void> {
   // 対戦中に参加人数が変わると文字の出現量スケールが端末ごとにズレてしまうため、
   // ラウンド開始時点の人数をここで固定する。
   const playerCountAtStart = room ? Object.keys(room.players ?? {}).length : 1;
-  await update(roomRef, { startAt: serverTimestamp(), playerCountAtStart });
+  // 入り直しで使い回したルームには前ラウンドのtakenLettersが残っていることがあるため、
+  // 開始時にも捨てる(restartRoomと同じ理由)。
+  await update(roomRef, { startAt: serverTimestamp(), playerCountAtStart, takenLetters: null });
 }
 
 /**
@@ -118,7 +157,10 @@ export async function restartRoom(roomId: string): Promise<void> {
   const room = snapshot.val() as Room | null;
   const seed = Math.floor(Math.random() * 2 ** 31);
   const playerCountAtStart = room ? Object.keys(room.players ?? {}).length : 1;
-  await update(roomRef, { startAt: serverTimestamp(), seed, playerCountAtStart });
+  // 前ラウンドのtakenLettersはもう参照されない(idPrefixがラウンドごとに変わる)。
+  // 同じルームを使い回すほど溜まっていき、購読するクライアント全員が
+  // そのぶん受信することになるため、ラウンドの切り替え時に捨てる。
+  await update(roomRef, { startAt: serverTimestamp(), seed, playerCountAtStart, takenLetters: null });
 }
 
 /** 再戦時、前回ラウンドの自分のスコア・成立単語をリセットする */

@@ -86,6 +86,21 @@ export function scoreWord(word: string, precedingShortStreak = 0): ScoredWord {
   return { word, length, basePoints, bonusTier, comboMultiplier, totalPoints };
 }
 
+/**
+ * 単語の並び(古い順)から、各単語の得点を計算し直す。
+ *
+ * 得点はダウンコンボも含めて「成立した単語の並び」だけで決まるため、
+ * 単語の文字列しか保存していない記録(対戦の戦績など)からでも、
+ * プレイ中とまったく同じ点数・ボーナス段階を再現できる。
+ */
+export function rescoreWordSequence(words: readonly string[]): ScoredWord[] {
+  const scored: ScoredWord[] = [];
+  for (const word of words) {
+    scored.push(scoreWord(word, countTrailingShortStreak(scored)));
+  }
+  return scored;
+}
+
 export interface ScoreSummary {
   words: ScoredWord[];
   totalScore: number;

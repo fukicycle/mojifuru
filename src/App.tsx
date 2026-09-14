@@ -10,6 +10,7 @@ import WordListScreen from './components/WordListScreen';
 import LicensePage from './components/LicensePage';
 import RoomLobbyScreen from './components/RoomLobbyScreen';
 import RoomResultScreen from './components/RoomResultScreen';
+import RoomHistoryScreen from './components/RoomHistoryScreen';
 import UpdateNotice from './components/UpdateNotice';
 import ReleaseNotesDialog from './components/ReleaseNotesDialog';
 
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="/room/:roomId" element={<RoomLobbyScreen />} />
             <Route path="/room/:roomId/play" element={<GameScreen mode="room" />} />
             <Route path="/room/:roomId/result" element={<RoomResultScreen />} />
+            <Route path="/room/:roomId/history" element={<RoomHistoryScreen />} />
           </Routes>
           <UpdateNotice />
           <ReleaseNotesDialog />

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { leaveRoom, startRoom, subscribeRoom, type Room } from '../firebase/room';
+import { isRoundLive, leaveRoom, startRoom, subscribeRoom, type Room } from '../firebase/room';
 import { useGameContext } from '../context/GameContext';
 import { signInAnonymouslyOnce } from '../firebase/config';
+import { rememberRoom } from '../storage/recentRooms';
 import { ChipLoader, ChipTitle, DecoChips, EmptyChip } from './decor';
 import { colorForChar } from './chipColors';
 
@@ -27,8 +28,17 @@ export default function RoomLobbyScreen() {
     );
   }, [roomId, firebaseEnabled]);
 
+  // ルームコードは覚えておけないため、入ったルームは端末に控えておき、
+  // タイトル画面の「さいきんのルーム」からまた集まれるようにする。
   useEffect(() => {
-    if (room?.startAt !== null && room?.startAt !== undefined && roomId) {
+    if (roomId) rememberRoom(roomId);
+  }, [roomId]);
+
+  // 進行中のラウンドがあるときだけプレイ画面へ送る。使い回したルームには
+  // 終わったラウンドのstartAtが残っていることがあり、それで送ってしまうと
+  // 開始直後に時間切れ扱いで結果画面へ弾かれてしまう。
+  useEffect(() => {
+    if (roomId && isRoundLive(room)) {
       navigate(`/room/${roomId}/play`);
     }
   }, [room, roomId, navigate]);

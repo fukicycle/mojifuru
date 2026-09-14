@@ -20,6 +20,7 @@ import {
   submitRoomWord,
   type Room,
 } from '../firebase/room';
+import { archiveRoundResult } from '../firebase/roomHistory';
 import { signInAnonymouslyOnce } from '../firebase/config';
 import { beginGameAudio, endGameAudio, playSfx } from '../audio/sfx';
 import { colorForChar } from './chipColors';
@@ -45,7 +46,7 @@ interface GameScreenProps {
 export default function GameScreen({ mode }: GameScreenProps) {
   const navigate = useNavigate();
   const { roomId } = useParams();
-  const { dawg, dawgError, setLastResult, firebaseEnabled, setIsPlaying, soundEnabled, toggleSound } =
+  const { dawg, dawgError, setLastResult, firebaseEnabled, playerName, setIsPlaying, soundEnabled, toggleSound } =
     useGameContext();
 
   const [room, setRoom] = useState<Room | null>(null);
@@ -146,12 +147,31 @@ export default function GameScreen({ mode }: GameScreenProps) {
     (summary: ScoreSummary) => {
       setLastResult(summary);
       if (mode === 'room' && roomId) {
+        const uid = uidRef.current;
+        const roundStartAt = room?.startAt;
+        if (uid && roundStartAt) {
+          // このラウンドの結果を戦績として残す。ルームは全員が退出すると消えるため、
+          // あとからルームコードで見返せるよう別ノードへ積んでおく。
+          // 保存に失敗しても結果表示は止めない(あくまで記録の付帯機能)。
+          void archiveRoundResult({
+            roomId,
+            roundStartAt,
+            uid,
+            name: room?.players?.[uid]?.name || playerName.trim(),
+            score: summary.totalScore,
+            words: summary.words.map((w) => w.word),
+          }).catch((error: unknown) => {
+            console.error('[mojifuru] 戦績の保存に失敗しました', error);
+          });
+        }
         navigate(`/room/${roomId}/result`);
       } else {
         navigate('/result');
       }
     },
-    [mode, roomId, navigate, setLastResult],
+    // roomが更新されるたびに作り直されるが、useGameSessionはonFinishをrefで保持する
+    // (=再生成してもゲームループには影響しない)ため、最新のルーム情報を素直に参照する。
+    [mode, roomId, navigate, setLastResult, room, playerName],
   );
 
   const handleWordConfirmed = useCallback(
