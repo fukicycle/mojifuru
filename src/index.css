@@ -11,6 +11,14 @@
 
   --bg: #fff8f0;
   --bg-panel: #ffffff;
+  /*
+   * アプリの器(.app-shell)の地色 = 画面のいちばん上に出る色。
+   * iOS PWA(standalone)には「WebViewがステータスバーの下から始まり、帯はOSが
+   * theme-colorで塗る」挙動があり、そこで帯とアプリの地色が違うと段差に見える。
+   * そのため index.html の <meta name="theme-color"> と vite.config.ts の
+   * manifest.theme_color は、必ずこの値と同じにすること。
+   */
+  --chrome-color: #fffdf9;
   --text: #4a3f4d;
   --text-soft: #8a7f8e;
   --text-h: #33283a;
@@ -37,6 +45,25 @@
    */
   --app-vh: 100dvh;
 
+  /*
+   * セーフエリア(ノッチ・ホームインジケーター)の余白。
+   * env()は端末やホーム画面に追加した時点の状態によっては0pxを返すため、
+   * 直接使わずこの変数を経由して、standalone表示のときだけ下端に最低値を持たせる
+   * (env()が0pxでもホームインジケーターと中身が重ならないようにするため)。
+   */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  /*
+   * iOS PWA(standalone)で「WebViewは画面全体・レイアウトビューポートだけが短い」
+   * 状態になったときの、画面下端に残る帯の高さ(src/viewport.ts が実測して上書きする)。
+   * 決め打ちで伸ばすとズレていない端末では逆に文書がはみ出すため、既定は0で、
+   * 実際にズレているときだけ値が入る。
+   */
+  --ios-bottom-shim: 0px;
+
   color-scheme: light;
   color: var(--text);
   background: var(--bg);
@@ -45,6 +72,17 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * ホーム画面に追加したPWAでは、ブラウザのツールバーが無いぶん画面のいちばん下まで
+ * 中身が来る。env(safe-area-inset-bottom)が0pxを返す端末でも最低限の余白が残るよう、
+ * standalone表示のときだけ下端に下限を持たせる。
+ */
+@media (display-mode: standalone) {
+  :root {
+    --safe-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
 }
 
 * {
@@ -60,14 +98,34 @@
 html {
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
   margin: 0;
-  height: var(--app-vh);
+  /* 下端の帯を塞ぐぶん(--ios-bottom-shim)だけ、アプリの器を画面の下まで伸ばす */
+  height: calc(var(--app-vh) + var(--ios-bottom-shim));
   overflow: hidden;
   overscroll-behavior: none;
   background: var(--bg);
+}
+
+/*
+ * iOS PWAで下端に帯が出る状態(src/viewport.ts が実測してこのクラスを付ける)。
+ * 伸ばしたぶんは、html/bodyにoverflow: hiddenが残っているとビューポート端で
+ * 切り取られて帯が戻ってしまうため、このときだけスクロール禁止を解く。
+ * 代わりに、
+ *   - 文書がビューポートより高くなるぶんの実際のスクロールは viewport.ts が原点に固定し、
+ *   - プレイ面(.falling-field)は touch-action: none でドラッグ自体を起こさせない
+ * ことで、「ページ全体はスクロールさせない」という原則は保つ。
+ */
+html.ios-bottom-shim,
+html.ios-bottom-shim body {
+  overflow: visible;
+}
+
+html.ios-bottom-shim {
+  height: calc(100% + var(--ios-bottom-shim));
 }
 
 #root {
@@ -101,24 +159,13 @@ button {
   width: 100%;
   max-width: var(--canvas-max-width);
   height: 100%;
-  background: var(--bg-panel);
+  /* ステータスバーの帯(OSがtheme-colorで塗る)と地続きに見せるための地色 */
+  background: var(--chrome-color);
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-soft);
-  /*
-   * PWA(ホーム画面追加)のstandalone表示では、apple-mobile-web-app-status-bar-style=
-   * black-translucentの効果でWebViewがステータスバー・ホームインジケーター領域まで
-   * 拡張される。#root側に安全領域ぶんの余白を作ると、そこにbodyの背景色(--bg)が
-   * 露出してapp-shellの背景色(--bg-panel)との間に段差が出てしまうため、
-   * 安全領域はapp-shell自身のpaddingとして内側に確保する
-   * (背景は端まで塗り、中身だけステータスバー・ホームインジケーターを避けて表示する)。
-   */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
 }
 
 @media (min-width: 480px) {
@@ -128,11 +175,22 @@ button {
   }
 }
 
+/*
+ * 各画面。セーフエリア(ノッチ・ホームインジケーター)ぶんの余白は、外側に足して逃がすのではなく
+ * 画面自身のpaddingに足し込む。
+ *
+ * PWA(ホーム画面追加)のstandalone表示では、apple-mobile-web-app-status-bar-style=
+ * black-translucentの効果でWebViewがステータスバー・ホームインジケーター領域まで拡張される。
+ * 外側(#rootやapp-shellの外)に余白を作ると、そこに下の階層の背景色が露出して段差になるため、
+ * 「背景は画面自身が端まで塗り、中身だけセーフエリアを避ける」形にする
+ * (ステータスバーの帯とアプリの地色が地続きに見える)。
+ */
 .screen {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 20px 16px;
+  padding: calc(20px + var(--safe-top)) calc(16px + var(--safe-right)) calc(20px + var(--safe-bottom))
+    calc(16px + var(--safe-left));
   gap: 16px;
   overflow: hidden;
   min-height: 0;
@@ -260,10 +318,15 @@ button {
 
 /* ===== 更新通知 ===== */
 
+/*
+ * position: fixedはレイアウトビューポート基準のため、iOS PWAでビューポートが画面より短い
+ * 状態(--ios-bottom-shim > 0)では画面下端に届かない。アプリの器(.app-shell)は
+ * 画面の下まで伸びているので、器を基準にしたposition: absoluteで配置する。
+ */
 .update-notice {
-  position: fixed;
+  position: absolute;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(16px + var(--safe-bottom));
   transform: translateX(-50%);
   z-index: 1000;
   display: flex;
@@ -305,14 +368,15 @@ button {
 
 /* ===== リリースノート(アップデート後の初回起動でだけ表示) ===== */
 
+/* .update-notice と同じ理由で、画面を覆う膜もアプリの器(.app-shell)基準にする */
 .release-notes-backdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: max(20px, var(--safe-top)) 20px max(20px, var(--safe-bottom));
   background: rgba(74, 63, 77, 0.45);
   animation: release-notes-fade-in 0.2s ease-out;
 }
@@ -655,6 +719,15 @@ button {
   border: 2px solid var(--border);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * 下端の帯を塞ぐためにページ全体のスクロール禁止を解いている状態(html.ios-bottom-shim)では、
+ * プレイ面を指でドラッグすると文書ごと動いてしまう。プレイ面はタップしか受け付けないので、
+ * この状態のときだけパン操作そのものを禁止して、プレイ中のズレを起こさせない。
+ */
+html.ios-bottom-shim .falling-field {
+  touch-action: none;
 }
 
 /*
@@ -1154,7 +1227,7 @@ button {
   position: relative;
   background:
     radial-gradient(120% 55% at 50% -8%, rgba(255, 210, 63, 0.24), transparent 70%),
-    linear-gradient(180deg, #fffdf9, var(--bg-panel) 46%);
+    linear-gradient(180deg, var(--chrome-color), var(--bg-panel) 46%);
 }
 
 /* 飾り以外の中身は必ず飾りの上に置く */

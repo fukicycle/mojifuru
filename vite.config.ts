@@ -32,9 +32,11 @@ export default defineConfig({
         lang: 'ja',
         display: 'standalone',
         orientation: 'portrait',
-        // src/index.cssの --bg / --color-orange-strong と統一
+        // src/index.cssの --bg / --chrome-color と統一。
+        // theme_colorはiOS PWAでステータスバーの帯を塗る色になるため、
+        // アプリの地色(--chrome-color = .app-shellの背景)と必ず同じにすること。
         background_color: '#fff8f0',
-        theme_color: '#ff9838',
+        theme_color: '#fffdf9',
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { GameProvider } from './context/GameContext';
 import { logAnalyticsPageView } from './firebase/config';
+import { setupViewportMetrics } from './viewport';
 import TitleScreen from './components/TitleScreen';
 import GameScreen from './components/GameScreen';
 import ResultScreen from './components/ResultScreen';
@@ -34,34 +35,9 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // iOS PWA(standalone)ではマルチタスク復帰後などにWebKitが100dvhを
-    // 再計算しないままになる既知バグがあるため、visualViewportの実測値で
-    // --app-vh を上書きして復帰のたびに強制的に再計算させる(index.css参照)。
-    const visualViewport = window.visualViewport;
-    let rafId = 0;
-
-    const applyHeight = () => {
-      if (document.visibilityState === 'hidden') return;
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const height = visualViewport?.height ?? window.innerHeight;
-        document.documentElement.style.setProperty('--app-vh', `${height}px`);
-      });
-    };
-
-    applyHeight();
-    visualViewport?.addEventListener('resize', applyHeight);
-    window.addEventListener('pageshow', applyHeight);
-    window.addEventListener('focus', applyHeight);
-    document.addEventListener('visibilitychange', applyHeight);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      visualViewport?.removeEventListener('resize', applyHeight);
-      window.removeEventListener('pageshow', applyHeight);
-      window.removeEventListener('focus', applyHeight);
-      document.removeEventListener('visibilitychange', applyHeight);
-    };
+    // iOS PWA(standalone)のビューポートのズレ(下端の帯・100dvhの再計算漏れ)を
+    // 実測してCSS変数に反映する。詳細は src/viewport.ts と index.css を参照。
+    return setupViewportMetrics();
   }, []);
 
   return (
