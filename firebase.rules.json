@@ -149,6 +149,17 @@
       }
     },
 
+    "wordCollection": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+
+        "$word": {
+          ".write": "auth != null && auth.uid === $uid && !data.exists()",
+          ".validate": "newData.isNumber() && newData.val() === now"
+        }
+      }
+    },
+
     "wordCandidates": {
       "$word": {
         ".read": "auth != null",

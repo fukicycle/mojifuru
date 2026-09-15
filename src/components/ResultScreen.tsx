@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
 import { ensureSignedIn, getFirebaseAuth } from '../firebase/config';
 import { submitScore } from '../firebase/leaderboard';
+import { recordFoundWords } from '../firebase/wordCollection';
+import { isRareWord } from '../game/rareWords';
 import type { BonusTier } from '../game/scoring';
-import { ChipTitle, DecoChips } from './decor';
+import { ChipTitle, DecoChips, WordChips } from './decor';
 
 function tierLabel(tier: BonusTier): string {
   if (tier === 'grand-bonus') return '大ボーナス';
@@ -20,6 +22,8 @@ export default function ResultScreen() {
   const [bestScore, setBestScore] = useState<number | null>(null);
   // 自己ベストを更新した匿名ユーザーにだけ、記録を引き継げることを知らせる(毎回出すとうるさいため)
   const [anonymous, setAnonymous] = useState(false);
+  // このプレイで はじめて ずかんに入った ことば
+  const [newWords, setNewWords] = useState<string[]>([]);
   const submittedRef = useRef(false);
   // プレイ終了間際は「確定」ボタンを連打しがちで、その残り連打がそのまま
   // 同じ画面位置にある「もう一度あそぶ」を誤タップしてしまう事故を防ぐため、
@@ -47,6 +51,12 @@ export default function ResultScreen() {
         setBestScore(result.bestScore);
         setAnonymous(getFirebaseAuth().currentUser?.isAnonymous ?? false);
         setSubmitState(result.improved ? 'updated' : 'kept');
+        // ずかんは付帯機能なので、記録に失敗してもランキング登録の結果表示は変えない
+        recordFoundWords(uid, lastResult.words.map((w) => w.word))
+          .then(setNewWords)
+          .catch((error: unknown) => {
+            console.error('[mojifuru] ずかんの記録に失敗しました', error);
+          });
       } catch {
         setSubmitState('error');
       }
@@ -86,6 +96,25 @@ export default function ResultScreen() {
         )}
       </div>
 
+      {newWords.length > 0 && (
+        <div className="panel panel--text discovery-card">
+          <p className="discovery-head">
+            <span aria-hidden="true">✨</span> はじめて見つけた ことば {newWords.length}語
+          </p>
+          <ul className="discovery-list">
+            {newWords.map((word) => (
+              <li className="word-pill" key={word}>
+                <WordChips word={word} />
+                {isRareWord(word) && <span className="tier-tag tier-tag--rare">レア</span>}
+              </li>
+            ))}
+          </ul>
+          <button className="text-link-button" onClick={() => navigate('/collection')}>
+            ずかんを見る
+          </button>
+        </div>
+      )}
+
       <div className="panel panel--scroll">
         <table className="word-list-table">
           <thead>
@@ -102,6 +131,7 @@ export default function ResultScreen() {
                   {w.bonusTier !== 'none' && (
                     <span className={`tier-tag tier-tag--${w.bonusTier}`}>{tierLabel(w.bonusTier)}</span>
                   )}
+                  {isRareWord(w.word) && <span className="tier-tag tier-tag--rare">レア</span>}
                 </td>
                 <td>{w.totalPoints}</td>
               </tr>

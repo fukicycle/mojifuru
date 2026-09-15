@@ -8,6 +8,7 @@ import GameScreen from './components/GameScreen';
 import ResultScreen from './components/ResultScreen';
 import LeaderboardScreen from './components/LeaderboardScreen';
 import WordListScreen from './components/WordListScreen';
+import CollectionScreen from './components/CollectionScreen';
 import LicensePage from './components/LicensePage';
 import RoomLobbyScreen from './components/RoomLobbyScreen';
 import RoomResultScreen from './components/RoomResultScreen';
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/result" element={<ResultScreen />} />
             <Route path="/leaderboard" element={<LeaderboardScreen />} />
             <Route path="/wordlist" element={<WordListScreen />} />
+            <Route path="/collection" element={<CollectionScreen />} />
             <Route path="/license" element={<LicensePage />} />
             <Route path="/room/:roomId" element={<RoomLobbyScreen />} />
             <Route path="/room/:roomId/play" element={<GameScreen mode="room" />} />

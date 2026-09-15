@@ -4,7 +4,7 @@
  * (背景の飾りは pointer-events: none、読み上げ対象からも外す)。
  */
 
-import { CHIP_COLORS } from './chipColors';
+import { CHIP_COLORS, colorForChar } from './chipColors';
 
 const DEFAULT_DECO_CHARS = ['も', 'じ', 'ふ', 'る', 'も', 'じ'] as const;
 
@@ -68,6 +68,19 @@ export function ChipLoader({ text = 'よみこみ中...' }: { text?: string }) {
       <span className="chip-loader-chip chip-loader-chip--aqua">ふ</span>
       <p className="chip-loader-text">{text}</p>
     </div>
+  );
+}
+
+/** ことばを、プレイ中と同じ丸い文字チップで並べる */
+export function WordChips({ word }: { word: string }) {
+  return (
+    <span className="word-chips" aria-label={word}>
+      {[...word].map((char, i) => (
+        <span key={i} className={`word-chip word-chip--${colorForChar(char)}`} aria-hidden="true">
+          {char}
+        </span>
+      ))}
+    </span>
   );
 }
 

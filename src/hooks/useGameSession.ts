@@ -10,6 +10,7 @@ import {
 } from '../game/fallingLetters';
 import { Dawg } from '../game/dawg';
 import { MAX_WORD_LENGTH, validateWord, type ValidationStatus } from '../game/wordValidator';
+import { isRareWord } from '../game/rareWords';
 import { summarizeScore, type ScoreSummary, type ScoredWord } from '../game/scoring';
 import { playSfx } from '../audio/sfx';
 
@@ -17,6 +18,8 @@ export interface WordFeedback {
   word: string;
   status: ValidationStatus | 'taken';
   points?: number;
+  /** 濁点・半濁点をふくむ単語(成立時だけ、得点とは別に演出を足す) */
+  rare?: boolean;
 }
 
 export interface UseGameSessionOptions {
@@ -188,12 +191,15 @@ export function useGameSession(options: UseGameSessionOptions): GameSession {
     if (!dawg || finishedRef.current || currentWord.length === 0) return;
     const result = validateWord(dawg, currentWord, scoredWordsRef.current);
     if (result.status === 'valid' && result.scored) {
+      const rare = isRareWord(currentWord);
       setScoredWords((words) => [...words, result.scored!]);
-      setFeedback({ word: currentWord, status: 'valid', points: result.scored.totalPoints });
+      setFeedback({ word: currentWord, status: 'valid', points: result.scored.totalPoints, rare });
       onWordConfirmed?.(result.scored);
       if (result.scored.bonusTier === 'grand-bonus') playSfx('confirmGrandBonus');
       else if (result.scored.bonusTier === 'bonus') playSfx('confirmBonus');
       else playSfx('confirmValid');
+      // ボーナス段階の音に重ねて鳴らす(段階とレアは独立して起こりうる)
+      if (rare) playSfx('confirmRare');
     } else {
       setFeedback({ word: currentWord, status: result.status });
       if (result.status === 'unregistered') {
