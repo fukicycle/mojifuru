@@ -65,14 +65,42 @@ interface RoundPlayerListProps {
 /**
  * 1ラウンドの順位表。行をタップすると、そのプレイヤーが作ったことばが開く。
  * 対戦相手がどんなことばを組み立てていたのかを、ここで見せる。
+ *
+ * 開閉は行ごとに独立していて、何人ぶんでも同時に開いたままにできる。
+ * (ひとりずつしか開けないと、ほかの人のことばと見くらべられなかった)
  */
 export function RoundPlayerList({ players, selfUid, defaultOpenUid }: RoundPlayerListProps) {
-  const [openUid, setOpenUid] = useState<string | null>(defaultOpenUid ?? null);
+  const [openUids, setOpenUids] = useState<ReadonlySet<string>>(
+    () => new Set(defaultOpenUid ? [defaultOpenUid] : []),
+  );
+
+  function toggle(uid: string) {
+    setOpenUids((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(uid)) next.add(uid);
+      return next;
+    });
+  }
+
+  // ひとりでも閉じていれば「ぜんぶひらく」、全員ひらいていれば「ぜんぶとじる」
+  const allOpen = players.length > 0 && players.every((player) => openUids.has(player.uid));
 
   return (
     <div className="round-player-list">
+      {players.length > 1 && (
+        <div className="round-player-tools">
+          <button
+            type="button"
+            className="round-player-toggle-all"
+            aria-expanded={allOpen}
+            onClick={() => setOpenUids(allOpen ? new Set() : new Set(players.map((p) => p.uid)))}
+          >
+            {allOpen ? 'ぜんぶとじる' : 'ぜんぶひらく'}
+          </button>
+        </div>
+      )}
       {players.map((player) => {
-        const isOpen = openUid === player.uid;
+        const isOpen = openUids.has(player.uid);
         const hasWords = player.words.length > 0;
         return (
           <div
@@ -83,7 +111,7 @@ export function RoundPlayerList({ players, selfUid, defaultOpenUid }: RoundPlaye
               type="button"
               className="round-player-row"
               aria-expanded={isOpen}
-              onClick={() => setOpenUid(isOpen ? null : player.uid)}
+              onClick={() => toggle(player.uid)}
             >
               <RankMark rank={player.rank} />
               <span
