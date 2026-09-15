@@ -868,6 +868,40 @@ html.ios-bottom-shim .falling-field {
   filter: drop-shadow(0 2px 4px rgba(255, 140, 0, 0.45));
 }
 
+/*
+ * 濁点・半濁点をふくむ単語(レア)の演出。ボーナス段階(金〜アンバー)とは
+ * 独立して起こりうるため、配色を金と取り合わないチップの3色寄りにして、
+ * 「大ボーナスかつレア」でもどちらの演出か見分けられるようにする。
+ */
+.field-status-rare {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  color: white;
+  background: linear-gradient(135deg, var(--color-aqua-strong), var(--color-magenta-strong));
+  box-shadow: 0 2px 6px rgba(63, 201, 214, 0.35);
+  text-shadow: none;
+  animation: rare-badge-twinkle 0.9s ease-in-out infinite;
+}
+
+.field-status--rare .field-status-word {
+  color: var(--color-aqua-strong);
+}
+
+@keyframes rare-badge-twinkle {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+}
+
 @keyframes field-status-pop {
   0% {
     opacity: 0;
@@ -1170,6 +1204,12 @@ html.ios-bottom-shim .falling-field {
 .tier-tag--grand-bonus {
   background: linear-gradient(135deg, var(--color-amber), var(--color-orange-strong));
   color: #4a2b00;
+}
+
+/* レア(濁点入り)の目印。ボーナス段階のタグと同時に並ぶため配色を分ける */
+.tier-tag--rare {
+  color: white;
+  background: linear-gradient(135deg, var(--color-aqua-strong), var(--color-magenta-strong));
 }
 
 /* ===== 単語一覧 / ランキング ===== */
@@ -2342,4 +2382,153 @@ html.ios-bottom-shim .falling-field {
 
 .totals-best-word {
   color: var(--color-orange-strong);
+}
+
+/* ことばを丸チップで並べる(結果画面の新発見・ずかんで共用) */
+.word-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+/*
+ * 結果画面の「はじめて見つけた ことば」。ずかんに入ったことをその場で知らせる。
+ * 語数が多いと下の単語表を押しつぶしてしまうため、この中だけをスクロールさせる。
+ */
+.discovery-card {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  background: linear-gradient(135deg, rgba(127, 224, 232, 0.22), rgba(255, 143, 196, 0.18));
+}
+
+.discovery-head {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.discovery-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  /* 3語ぶんを出し切り、4語目を半分のぞかせて「まだ下にある」ことを伝える高さ */
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ほかの画面のことば一覧と同じく、タグは行の右端にそろえる */
+.discovery-list .word-chips {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ずかん(あつめたことばの記録) */
+.collection-summary {
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.collection-total {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.collection-total-value {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--color-orange-strong);
+  margin-right: 2px;
+}
+
+/*
+ * 収録語数がとても多いぶん、バーはいつまでもわずかにしか伸びない。
+ * それでも「増えている」ことが見えるよう、下限の幅(4px)を持たせている。
+ */
+.collection-progress {
+  display: block;
+  height: 8px;
+  margin: 6px 0;
+  border-radius: 999px;
+  background: #f3ede8;
+  overflow: hidden;
+}
+
+.collection-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-aqua-strong), var(--color-magenta-strong));
+}
+
+.collection-stats {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.collection-rare-count {
+  font-weight: 700;
+  color: var(--color-aqua-strong);
+}
+
+.collection-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tab-button--rare.is-active {
+  background: linear-gradient(135deg, var(--color-aqua-strong), var(--color-magenta-strong));
+  box-shadow: 0 2px 6px rgba(255, 95, 168, 0.35);
+}
+
+/* 8文字のことばでも1行に収めるため、行の中ではチップを折り返させない */
+.collection-row .word-chips {
+  flex-wrap: nowrap;
+}
+
+.collection-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* レア(濁点入り)はプレイ中の演出と同じ配色で縁取り、見つけた価値を残す */
+.collection-row--rare {
+  background: linear-gradient(135deg, rgba(127, 224, 232, 0.25), rgba(255, 143, 196, 0.2));
+  box-shadow: inset 0 0 0 1.5px var(--color-aqua-strong);
+}
+
+.collection-display {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collection-date {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-soft);
 }

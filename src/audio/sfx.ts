@@ -211,6 +211,7 @@ export type SfxName =
   | 'confirmValid'
   | 'confirmBonus'
   | 'confirmGrandBonus'
+  | 'confirmRare'
   | 'confirmUnregistered'
   | 'claimFailed'
   | 'deleteChar'
@@ -245,6 +246,15 @@ export function playSfx(name: SfxName): void {
         { freq: 659.25, startOffset: 0.06, duration: 0.08, type: 'triangle', gain: 0.22 },
         { freq: 783.99, startOffset: 0.12, duration: 0.08, type: 'triangle', gain: 0.22 },
         { freq: 1046.5, startOffset: 0.18, duration: 0.26, type: 'triangle', gain: 0.25 },
+      ]);
+      break;
+    case 'confirmRare':
+      // 濁点入り(レア)の単語に重ねる きらめき音。ボーナス段階の音と同時に鳴るため、
+      // 少し遅らせた高音の分散和音にして、打ち消し合わずに「おまけ」として聞こえるようにする。
+      playTones([
+        { freq: 1318.51, startOffset: 0.1, duration: 0.07, type: 'sine', gain: 0.12 },
+        { freq: 1760, startOffset: 0.17, duration: 0.07, type: 'sine', gain: 0.12 },
+        { freq: 2349.32, startOffset: 0.24, duration: 0.22, type: 'sine', gain: 0.13 },
       ]);
       break;
     case 'confirmUnregistered':

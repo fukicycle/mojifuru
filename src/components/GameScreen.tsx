@@ -21,6 +21,7 @@ import {
   type Room,
 } from '../firebase/room';
 import { archiveRoundResult } from '../firebase/roomHistory';
+import { recordFoundWords } from '../firebase/wordCollection';
 import { ensureSignedIn } from '../firebase/config';
 import { beginGameAudio, endGameAudio, playSfx } from '../audio/sfx';
 import { colorForChar } from './chipColors';
@@ -162,6 +163,15 @@ export default function GameScreen({ mode }: GameScreenProps) {
             words: summary.words.map((w) => w.word),
           }).catch((error: unknown) => {
             console.error('[mojifuru] 戦績の保存に失敗しました', error);
+          });
+        }
+        if (uid) {
+          // 対戦でつくったことばも ずかんにためる(ソロは結果画面側で記録する)
+          void recordFoundWords(
+            uid,
+            summary.words.map((w) => w.word),
+          ).catch((error: unknown) => {
+            console.error('[mojifuru] ずかんの記録に失敗しました', error);
           });
         }
         navigate(`/room/${roomId}/result`);
@@ -409,9 +419,16 @@ export default function GameScreen({ mode }: GameScreenProps) {
         {session.feedback && (
           <div
             key={feedbackKey}
-            className={`field-status field-status--${feedbackClass(session.feedback)} field-status--tier-${feedbackTier(session.feedback)}`}
+            className={`field-status field-status--${feedbackClass(session.feedback)} field-status--tier-${feedbackTier(session.feedback)} ${
+              session.feedback.rare ? 'field-status--rare' : ''
+            }`}
             style={{ '--pop-scale': feedbackPopScale(session.feedback) } as CSSProperties}
           >
+            {session.feedback.rare && (
+              <span className="field-status-rare">
+                <span aria-hidden="true">✨</span>レアなことば<span aria-hidden="true">✨</span>
+              </span>
+            )}
             <span className="field-status-word">「{session.feedback.word}」</span>
             {session.feedback.status === 'valid' ? (
               <span className="field-status-points">+{session.feedback.points}点</span>

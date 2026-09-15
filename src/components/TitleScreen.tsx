@@ -198,6 +198,7 @@ export default function TitleScreen() {
       {firebaseEnabled && <AccountPanel />}
 
       <div className="footer-links">
+        {firebaseEnabled && <Link to="/collection">ずかん</Link>}
         <Link to="/wordlist">単語一覧</Link>
         <Link to="/leaderboard">ランキング</Link>
         <Link to="/license">ライセンス</Link>
