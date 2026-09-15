@@ -288,19 +288,26 @@ button {
 
 .footer-links {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
   justify-content: center;
-  padding: 12px;
+  padding: 12px 0;
   font-size: 13px;
 }
 
+/*
+ * 狭い端末では4つ並べると1つぶんの幅が足りず、リンクの文字が途中で折り返されてしまう
+ * (「ランキン/グ」のような見た目になる)。文字は折り返さず、入りきらないときだけ
+ * 行を分けるために、リンク側をnowrap・容器側をwrapにする。
+ */
 .footer-links a {
   color: var(--text-soft);
   text-decoration: none;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.75);
   box-shadow: inset 0 0 0 1px var(--border);
+  white-space: nowrap;
 }
 
 .footer-links a:hover {
