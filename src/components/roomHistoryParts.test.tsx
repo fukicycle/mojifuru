@@ -31,6 +31,39 @@ describe('RoundPlayerList', () => {
     expect(screen.queryByLabelText('ひまわり')).toBeNull();
   });
 
+  it('何人ぶんでも同時に開いたままにできる', () => {
+    render(<RoundPlayerList players={rankRoundPlayers(players)} selfUid="me" />);
+
+    fireEvent.click(screen.getByText('らいばる'));
+    fireEvent.click(screen.getByText('わたし'));
+    // 先に開いた行は閉じない(ふたりのことばを見くらべられる)
+    expect(screen.getByLabelText('あいうえおかき')).toBeTruthy();
+    expect(screen.getByLabelText('ひまわり')).toBeTruthy();
+
+    // もう一度タップしたぶんだけが閉じる
+    fireEvent.click(screen.getByText('らいばる'));
+    expect(screen.queryByLabelText('あいうえおかき')).toBeNull();
+    expect(screen.getByLabelText('ひまわり')).toBeTruthy();
+  });
+
+  it('「ぜんぶひらく」で全員のことばが開き、もう一度押すと閉じる', () => {
+    render(<RoundPlayerList players={rankRoundPlayers(players)} selfUid="me" />);
+
+    fireEvent.click(screen.getByText('ぜんぶひらく'));
+    expect(screen.getByLabelText('あいうえおかき')).toBeTruthy();
+    expect(screen.getByLabelText('ひまわり')).toBeTruthy();
+    expect(screen.getByText('このラウンドはことばができませんでした')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('ぜんぶとじる'));
+    expect(screen.queryByLabelText('あいうえおかき')).toBeNull();
+    expect(screen.queryByLabelText('ひまわり')).toBeNull();
+  });
+
+  it('ひとりしかいないラウンドには「ぜんぶひらく」を出さない', () => {
+    render(<RoundPlayerList players={rankRoundPlayers({ me: players.me })} selfUid="me" />);
+    expect(screen.queryByText('ぜんぶひらく')).toBeNull();
+  });
+
   it('最初から開いておく指定(結果画面の自分)が効く', () => {
     render(<RoundPlayerList players={rankRoundPlayers(players)} selfUid="me" defaultOpenUid="me" />);
     expect(screen.getByLabelText('ひまわり')).toBeTruthy();

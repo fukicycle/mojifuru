@@ -178,7 +178,7 @@ export default function RoomResultScreen() {
       </div>
 
       {tab !== 'totals' && (
-        <p className="screen-footnote">なまえをタップすると、そのひとの作ったことばが見られます</p>
+        <p className="screen-footnote">なまえをタップすると、そのひとの作ったことばが見られます(ぜんぶひらけます)</p>
       )}
 
       {(syncError || historyError) && (
