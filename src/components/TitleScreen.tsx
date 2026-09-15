@@ -5,7 +5,21 @@ import { ensureSignedIn } from '../firebase/config';
 import { createRoom, joinRoom, rejoinRoom } from '../firebase/room';
 import { forgetRoom, loadRecentRooms } from '../storage/recentRooms';
 import AccountPanel from './AccountPanel';
+import { CHIP_COLORS } from './chipColors';
 import { DecoChips } from './decor';
+
+/*
+ * 画面下のリンクにも、アイコンと同じ丸チップを添える。
+ * チップの文字はすべてひらがなで、行き先の頭文字をとる。
+ * 「ランキング」と「ライセンス」は頭文字が同じ「ら」になってしまうため、
+ * ライセンスだけは2文字目の「い」を使って見分けられるようにしている。
+ */
+const FOOTER_LINKS = [
+  { to: '/collection', mark: 'ず', label: 'ずかん', needsFirebase: true },
+  { to: '/wordlist', mark: 'こ', label: 'ことば', needsFirebase: false },
+  { to: '/leaderboard', mark: 'ら', label: 'ランキング', needsFirebase: false },
+  { to: '/license', mark: 'い', label: 'ライセンス', needsFirebase: false },
+] as const;
 
 /** さいきんのルームに添える日付(「9/14」) */
 function formatJoinedAt(at: number): string {
@@ -198,10 +212,18 @@ export default function TitleScreen() {
       {firebaseEnabled && <AccountPanel />}
 
       <div className="footer-links">
-        {firebaseEnabled && <Link to="/collection">ずかん</Link>}
-        <Link to="/wordlist">単語一覧</Link>
-        <Link to="/leaderboard">ランキング</Link>
-        <Link to="/license">ライセンス</Link>
+        {FOOTER_LINKS.filter((link) => firebaseEnabled || !link.needsFirebase).map((link, i) => (
+          <Link className="footer-link" to={link.to} key={link.to}>
+            {/* 飾りなので、ことばのチップ(colorForChar)ではなく見出しと同じ並び順で3色を回す */}
+            <span
+              className={`footer-link-chip footer-link-chip--${CHIP_COLORS[i % CHIP_COLORS.length]}`}
+              aria-hidden="true"
+            >
+              {link.mark}
+            </span>
+            {link.label}
+          </Link>
+        ))}
       </div>
       <p className="app-version">v{__APP_VERSION__}</p>
     </div>
