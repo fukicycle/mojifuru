@@ -5,20 +5,25 @@ import { ensureSignedIn } from '../firebase/config';
 import { createRoom, joinRoom, rejoinRoom } from '../firebase/room';
 import { forgetRoom, loadRecentRooms } from '../storage/recentRooms';
 import AccountPanel from './AccountPanel';
-import { CHIP_COLORS } from './chipColors';
 import { DecoChips } from './decor';
 
 /*
- * 画面下のリンクにも、アイコンと同じ丸チップを添える。
- * チップの文字はすべてひらがなで、行き先の頭文字をとる。
- * 「ランキング」と「ライセンス」は頭文字が同じ「ら」になってしまうため、
- * ライセンスだけは2文字目の「い」を使って見分けられるようにしている。
+ * 画面下のリンクは、アイコンと同じ丸チップの下になまえを置く縦並びにする。
+ * チップとなまえを横に並べると1つぶんが広くなり、狭い端末で行が折り返されるため。
+ *
+ * チップの文字はすべてひらがなで、行き先の頭文字をとる。「ランキング」と
+ * 「ライセンス」は頭文字が同じ「ら」になってしまうため、ライセンスだけは
+ * 2文字目の「い」を使って見分けられるようにしている。
+ *
+ * 色は飾りなので、ことばのチップ(colorForChar)ではなくリンクごとに決め打ちする
+ * (リンクの出し分けで色がずれないように)。ライセンスだけは案内ではなく表記なので
+ * 3色から外して落ち着いた色にする。
  */
 const FOOTER_LINKS = [
-  { to: '/collection', mark: 'ず', label: 'ずかん', needsFirebase: true },
-  { to: '/wordlist', mark: 'こ', label: 'ことば', needsFirebase: false },
-  { to: '/leaderboard', mark: 'ら', label: 'ランキング', needsFirebase: false },
-  { to: '/license', mark: 'い', label: 'ライセンス', needsFirebase: false },
+  { to: '/collection', mark: 'ず', label: 'ずかん', tone: 'magenta', needsFirebase: true },
+  { to: '/wordlist', mark: 'こ', label: 'ことば', tone: 'orange', needsFirebase: false },
+  { to: '/leaderboard', mark: 'ら', label: 'ランキング', tone: 'aqua', needsFirebase: false },
+  { to: '/license', mark: 'い', label: 'ライセンス', tone: 'muted', needsFirebase: false },
 ] as const;
 
 /** さいきんのルームに添える日付(「9/14」) */
@@ -212,16 +217,12 @@ export default function TitleScreen() {
       {firebaseEnabled && <AccountPanel />}
 
       <div className="footer-links">
-        {FOOTER_LINKS.filter((link) => firebaseEnabled || !link.needsFirebase).map((link, i) => (
+        {FOOTER_LINKS.filter((link) => firebaseEnabled || !link.needsFirebase).map((link) => (
           <Link className="footer-link" to={link.to} key={link.to}>
-            {/* 飾りなので、ことばのチップ(colorForChar)ではなく見出しと同じ並び順で3色を回す */}
-            <span
-              className={`footer-link-chip footer-link-chip--${CHIP_COLORS[i % CHIP_COLORS.length]}`}
-              aria-hidden="true"
-            >
+            <span className={`footer-link-chip footer-link-chip--${link.tone}`} aria-hidden="true">
               {link.mark}
             </span>
-            {link.label}
+            <span className="footer-link-label">{link.label}</span>
           </Link>
         ))}
       </div>
