@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
 import { ensureSignedIn, getFirebaseAuth } from '../firebase/config';
@@ -6,7 +6,7 @@ import { submitScore } from '../firebase/leaderboard';
 import { recordFoundWords } from '../firebase/wordCollection';
 import { isRareWord } from '../game/rareWords';
 import type { BonusTier } from '../game/scoring';
-import { ChipTitle, DecoChips, WordChips } from './decor';
+import { ChipTitle, DecoChips, EmptyChip, WordChips } from './decor';
 
 function tierLabel(tier: BonusTier): string {
   if (tier === 'grand-bonus') return '大ボーナス';
@@ -63,20 +63,24 @@ export default function ResultScreen() {
     })();
   }, [lastResult, firebaseEnabled, playerName]);
 
+  const newWordSet = useMemo(() => new Set(newWords), [newWords]);
+
   if (!lastResult) return null;
 
   return (
-    <div className="screen screen--decorated">
+    <div className="screen screen--decorated result-screen">
       <DecoChips />
 
       <ChipTitle text="けっか" />
 
       <div className="panel panel--text result-card">
-        <div className="result-total">{lastResult.totalScore}点</div>
-        <div className="result-stats">
-          <span>成立 {lastResult.wordCount}語</span>
-          <span>ボーナス {lastResult.bonusCount}回</span>
-          <span>大ボーナス {lastResult.grandBonusCount}回</span>
+        <div className="result-headline">
+          <span className="result-total">{lastResult.totalScore}点</span>
+          <span className="result-stats">
+            <span>成立 {lastResult.wordCount}語</span>
+            <span>ボーナス {lastResult.bonusCount}回</span>
+            <span>大 {lastResult.grandBonusCount}回</span>
+          </span>
         </div>
         {firebaseEnabled && submitState !== 'idle' && (
           <p className={`submit-status submit-status--${submitState}`}>
@@ -96,67 +100,50 @@ export default function ResultScreen() {
         )}
       </div>
 
+      {/*
+       * ずかんに入ったことは、下の一覧の「はじめて」タグで1語ずつ分かる。
+       * ここは語数とずかんへの導線だけを持つ1行の帯にして、一覧の高さを譲る
+       * (同じことばを2つのカードに並べると、どちらも潰れて見づらかった)。
+       */}
       {newWords.length > 0 && (
-        <div className="panel panel--text discovery-card">
-          <p className="discovery-head">
+        <div className="discovery-bar">
+          <span className="discovery-bar-text">
             <span aria-hidden="true">✨</span> はじめて見つけた ことば {newWords.length}語
-          </p>
-          <ul className="discovery-list">
-            {newWords.map((word) => (
-              <li className="word-pill" key={word}>
-                <WordChips word={word} />
-                {isRareWord(word) && <span className="tier-tag tier-tag--rare">レア</span>}
-              </li>
-            ))}
-          </ul>
-          <button className="text-link-button" onClick={() => navigate('/collection')}>
+          </span>
+          <button className="text-link-button discovery-bar-link" onClick={() => navigate('/collection')}>
             ずかんを見る
           </button>
         </div>
       )}
 
       <div className="panel panel--scroll">
-        <table className="word-list-table">
-          <thead>
-            <tr>
-              <th>単語</th>
-              <th>点数</th>
-            </tr>
-          </thead>
-          <tbody>
+        {lastResult.words.length === 0 ? (
+          <EmptyChip mark="?" text="成立した ことばは ありませんでした" />
+        ) : (
+          <ul className="word-pill-list">
             {lastResult.words.map((w, i) => (
-              <tr key={i}>
-                <td>
-                  {w.word}
-                  {w.bonusTier !== 'none' && (
-                    <span className={`tier-tag tier-tag--${w.bonusTier}`}>{tierLabel(w.bonusTier)}</span>
-                  )}
-                  {isRareWord(w.word) && <span className="tier-tag tier-tag--rare">レア</span>}
-                </td>
-                <td>{w.totalPoints}</td>
-              </tr>
+              <li className="word-pill" key={i}>
+                <WordChips word={w.word} />
+                {w.bonusTier !== 'none' && (
+                  <span className={`tier-tag tier-tag--${w.bonusTier}`}>{tierLabel(w.bonusTier)}</span>
+                )}
+                {isRareWord(w.word) && <span className="tier-tag tier-tag--rare">レア</span>}
+                {/* 「はじめて」は上の帯と同じ✨だけで示す。全行に文字のタグが並ぶと、
+                    ことばそのものが押し出されて読めなくなる */}
+                {newWordSet.has(w.word) && (
+                  <span className="tier-tag tier-tag--new" title="はじめて見つけた ことば">
+                    <span aria-hidden="true">✨</span>
+                    <span className="visually-hidden">はじめて</span>
+                  </span>
+                )}
+                <span className="word-pill-points">+{w.totalPoints}</span>
+              </li>
             ))}
-            {lastResult.words.length === 0 && (
-              <tr>
-                <td colSpan={2} style={{ color: 'var(--text-soft)', textAlign: 'center' }}>
-                  成立した単語はありませんでした
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          </ul>
+        )}
       </div>
 
-      <div className="button-row" style={{ margin: '0 auto' }}>
-        {firebaseEnabled && (
-          <button
-            className="button button--secondary button--block"
-            disabled={!controlsReady}
-            onClick={() => navigate('/leaderboard')}
-          >
-            ランキングを見る
-          </button>
-        )}
+      <div className="result-actions">
         <button
           className="button button--primary button--block"
           disabled={!controlsReady}
@@ -164,13 +151,24 @@ export default function ResultScreen() {
         >
           もう一度あそぶ
         </button>
-        <button
-          className="button button--ghost button--block"
-          disabled={!controlsReady}
-          onClick={() => navigate('/')}
-        >
-          タイトルへ
-        </button>
+        <div className="result-actions-row">
+          {firebaseEnabled && (
+            <button
+              className="button button--secondary button--block"
+              disabled={!controlsReady}
+              onClick={() => navigate('/leaderboard')}
+            >
+              ランキング
+            </button>
+          )}
+          <button
+            className="button button--ghost button--block"
+            disabled={!controlsReady}
+            onClick={() => navigate('/')}
+          >
+            タイトルへ
+          </button>
+        </div>
       </div>
     </div>
   );

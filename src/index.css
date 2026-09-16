@@ -1200,9 +1200,22 @@ html.ios-bottom-shim .falling-field {
 
 /* ===== 結果画面 ===== */
 
+/*
+ * 点数と内訳は1行にまとめる。ここを縦に積むと、そのぶん下の「作ったことば」の
+ * 一覧に残る高さが無くなり、1行しか見えない画面になってしまう。
+ */
+.result-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px 12px;
+}
+
 .result-total {
-  font-size: 40px;
+  font-size: 36px;
   font-weight: 700;
+  line-height: 1.15;
   background: linear-gradient(90deg, var(--color-magenta-strong), var(--color-orange-strong));
   -webkit-background-clip: text;
   background-clip: text;
@@ -1211,22 +1224,11 @@ html.ios-bottom-shim .falling-field {
 
 .result-stats {
   display: flex;
-  gap: 16px;
-  font-size: 13px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  font-size: 12px;
   color: var(--text-soft);
-}
-
-.word-list-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 14px;
-}
-
-.word-list-table th,
-.word-list-table td {
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
 }
 
 .tier-tag {
@@ -1251,6 +1253,15 @@ html.ios-bottom-shim .falling-field {
 .tier-tag--rare {
   color: white;
   background: linear-gradient(135deg, var(--color-aqua-strong), var(--color-magenta-strong));
+}
+
+/*
+ * ずかんに はじめて入った ことばの目印。得点にもレア度にも関係しない記録のしるしなので、
+ * ボーナス(金)ともレア(アクア〜マゼンタ)とも取り合わない、淡い塗りにする。
+ */
+.tier-tag--new {
+  padding: 2px 6px;
+  background: rgba(127, 224, 232, 0.35);
 }
 
 /* ===== 単語一覧 / ランキング ===== */
@@ -1676,14 +1687,64 @@ html.ios-bottom-shim .falling-field {
   margin: 2px 0 6px;
 }
 
+/* 結果画面。カードを積みすぎると一覧が潰れるため、画面全体の間隔も少し詰める */
+.result-screen {
+  gap: 12px;
+}
+
 /* 結果画面のスコアカード */
 .result-card {
   text-align: center;
 }
 
-.result-card .result-stats {
-  justify-content: center;
-  margin-top: 4px;
+/*
+ * ずかんの語数とずかんへの導線だけを持つ1行の帯。
+ * ことばそのものは下の一覧に「はじめて」タグで出るので、ここでは重ねて並べない。
+ */
+.discovery-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(127, 224, 232, 0.28), rgba(255, 143, 196, 0.22));
+}
+
+.discovery-bar-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.discovery-bar-link {
+  align-self: auto;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+/* 結果画面の操作。主ボタンを全幅、副ボタンを横並びにして高さを1段ぶん節約する */
+.result-actions {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.result-actions-row {
+  display: flex;
+  gap: 10px;
+}
+
+.result-actions-row .button {
+  flex: 1;
+  min-width: 0;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 /* .count-badge の align-self を上書きするため詳細度を上げる */
@@ -2333,8 +2394,16 @@ html.ios-bottom-shim .falling-field {
   color: var(--color-orange-strong);
 }
 
+/* ほかの画面のことば一覧と同じく、タグは行の右端にそろえる */
+.word-pill .word-chips {
+  flex: 1;
+  min-width: 0;
+}
+
 .word-pill .tier-tag {
   margin-left: 0;
+  /* タグが3つ並ぶ行(ボーナス・レア・はじめて)でも文字を潰さない */
+  flex-shrink: 0;
 }
 
 .history-round-list {
@@ -2432,44 +2501,6 @@ html.ios-bottom-shim .falling-field {
   gap: 2px;
 }
 
-/*
- * 結果画面の「はじめて見つけた ことば」。ずかんに入ったことをその場で知らせる。
- * 語数が多いと下の単語表を押しつぶしてしまうため、この中だけをスクロールさせる。
- */
-.discovery-card {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-  background: linear-gradient(135deg, rgba(127, 224, 232, 0.22), rgba(255, 143, 196, 0.18));
-}
-
-.discovery-head {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-h);
-}
-
-.discovery-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  /* 3語ぶんを出し切り、4語目を半分のぞかせて「まだ下にある」ことを伝える高さ */
-  max-height: 120px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* ほかの画面のことば一覧と同じく、タグは行の右端にそろえる */
-.discovery-list .word-chips {
-  flex: 1;
-  min-width: 0;
-}
 
 /* ずかん(あつめたことばの記録) */
 .collection-summary {
@@ -2572,4 +2603,16 @@ html.ios-bottom-shim .falling-field {
   flex-shrink: 0;
   font-size: 11px;
   color: var(--text-soft);
+}
+
+/* 読み上げにだけ残す文言(画面では見せない) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
