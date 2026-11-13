@@ -10,6 +10,7 @@
 - ホスティング:GitHub Pages(`.github/workflows/deploy.yml` によるActionsデプロイ、`base: '/mojifuru/'`)
 - リアルタイム同期・データ永続化:Firebase Realtime Database(Anonymous Auth + 任意のGoogle連携)。**任意**で、未設定でも「ひとりで遊ぶ」は動作する
 - PWA:`vite-plugin-pwa`(generateSW / `registerType: 'prompt'`)。辞書データも事前キャッシュしオフライン起動可能
+- 質感(凹凸とガラス):自作のデザインシステム `@fukicycle/design`(GitHub: `fukicycle/design`)から受け取る。色はもじふるのまま
 - テスト:Vitest(jsdom)、Lint:oxlint
 - サーバーサイドロジックは一切持たない(Cloud Functions等も使わない)
 
@@ -50,6 +51,7 @@ mojifuru/
 │   ├── hooks/useRoomHistory.ts    # 戦績の購読をReactに配線するフック
 │   ├── hooks/useAuthAccount.ts    # サインイン状態の購読(匿名認証は走らせない)
 │   ├── context/GameContext.tsx    # 辞書読み込み状態・プレイヤー名・音設定・isPlaying
+│   ├── update/                    # 新しい版のおしらせ(SWの更新検知・変更点の取得・既読)
 │   ├── audio/sfx.ts               # Web Audio合成の効果音
 │   ├── storage/recentRooms.ts     # さいきん入ったルーム(端末のみ・localStorage)
 │   ├── workers/wordlistWorker.ts  # wordlist.jsonのfetch+parseをワーカーへ逃がす
@@ -82,7 +84,14 @@ mojifuru/
 | `/room/:roomId/result` | 対戦結果・再戦(このラウンド/つうさん/きろく の3タブ) |
 | `/room/:roomId/history` | ルームの戦績(ルームコードだけで閲覧可。ルーム消滅後も残る) |
 
-`UpdateNotice` は全画面共通で、SW更新検知時に「今すぐ更新」を出す(プレイ中は `isPlaying` により表示を保留)。
+### 新しい版のおしらせ(`src/update/`・`NoticeButton`・`NoticeSheet`)
+
+- **新しい版は自動で切り替えない。バナーやポップアップも出さない**(以前の「今すぐ更新」は廃止)
+- SWが新しい版を見つけたら、タイトル画面右上の**風鈴(おしらせ)に点を1つ**付ける(数字は出さない)。タイトル画面のバージョン表示の横にも「あたらしい版があります」を出す
+- おしらせを開くと、**新しい版の変更点を読んでから**[こうしんする]を押せる。新しい版のノートは今動いている版の中には無いため、ビルド時に `RELEASE_NOTES` を `release-notes.json` として書き出し(`vite.config.ts` のプラグイン)、配信先から読む。SWの事前キャッシュと一致しないよう、クエリを付けて取得する
+- おしらせから更新したときは、更新前に変更点を読んでいるので `lastSeenVersion` を新しい版にしておき、更新後の `ReleaseNotesDialog` では同じものを出さない
+- 風鈴とおしらせはシートを開く操作なので、`click` で受ける(`pointerdown` だと同じタップの `click` が膜に届いて即閉じる)
+- リリースのたびに `src/releaseNotes.ts` に使う人の言葉で変更点を書く(内部の変更は書かない)
 
 ## ゲームルールの仕様
 
@@ -213,6 +222,12 @@ mojifuru/
 - ページ全体のスクロールは禁止(`html`/`body` を `overflow: hidden`)。スクロールが必要な画面は内側のコンテナだけに `overflow-y: auto` を持たせる(例外は後述のセーフエリア対応)
 - 操作は `click` ではなく `pointerdown` で確定させる(反応の遅さを避けるため)
   - 例外:画面の上に重なって**閉じると消える**ダイアログ(`ReleaseNotesDialog` など)は `click` で閉じる。`pointerdown` で消すと同じタップの `click` が下のボタンに届き、タイトル画面の「ひとりで遊ぶ」が押されてゲームが即時開始される(過去の実バグ)
+- **質感**:`@fukicycle/design`(`src/main.tsx` で `tokens.css`・`material.css` を読み込む)に、もじふるの色(`--fk-ground-1`・`--fk-ground-2`・`--fk-ink`・`--fk-accent`・`--fk-on-accent`、`src/index.css`)を渡し、影と光を計算させる。**色はもじふるの配色のまま変えない**
+  - ボタン・音のボタン・風鈴は**浮いていて、押すと沈む**(縮む動きは使わない)。入力欄・タブの溝・プレイ面(`.falling-field`)は**沈める**
+  - 器(`.panel`・`.virtual-list`・`.recent-rooms`・`.release-notes-panel`)は**ガラス**。背景の飾りチップが透けて見える。暗い膜の上に出るダイアログは面を濃くする
+  - **プレイ面にはガラスを使わない**(降ってくる文字の上でぼかすと重く、操作に響くため)
+  - もじふるは昼のテーマだけ。`index.html` の `<html data-theme="light">` を外さない(外すと、端末が夜の設定のときに影の計算が夜に切り替わる)
+  - ボタンの白い文字はコントラスト比 4.5:1 に届かないが、ゲームの華やかさを優先して今の配色を保つと決定済み
 - **画面共通の飾り**:全画面をアイコン(丸くてつやのある3色の文字チップ)と同じテイストで揃える。パーツは `src/components/decor.tsx`(`DecoChips` 背景の浮遊チップ / `ChipTitle` チップ見出し / `ChipLoader` 読み込み中 / `EmptyChip` 空状態)、器は `.screen--decorated` と `.panel`(半透明カード)。飾りは必ず `pointer-events: none` で操作を妨げないこと。ゲーム画面(`GameScreen`)だけは視認性・パフォーマンス優先で飾りを入れない
 - 文字チップの色決定 `colorForChar` は `src/components/chipColors.ts` に集約(同じ文字は常に同じ色)
 - 開発者ツール対策:F12無効化などの強い制限は不採用。右クリック無効化のみ `App.tsx` で実施
@@ -232,7 +247,7 @@ mojifuru/
 - `env()` は直接使わず `--safe-top` / `--safe-right` / `--safe-bottom` / `--safe-left` を経由する。`env()` が `0px` を返す端末があるため、standalone表示のときだけ `--safe-bottom` に下限(`max(12px, env(...))`)を持たせている
 - **下端の帯は実測して塞ぐ**(`src/viewport.ts`)。`screen.height - innerHeight` の差を `--ios-bottom-shim` に入れ、そのぶんだけ `html`/`body` を伸ばす。決め打ちで `calc(100% + env(safe-area-inset-top))` と伸ばすと、ズレていない端末では逆に文書がはみ出す。差が0以下・120pxより大きいときは測定ミスとみなして伸ばさない
   - 伸ばしている間(`html.ios-bottom-shim`)だけ `overflow: hidden` を解く。残したままだと伸ばしたぶんがビューポート端で切り取られ、帯が戻る。代わりに `viewport.ts` が `scrollY` を0に固定し、プレイ面(`.falling-field`)はこのときだけ `touch-action: none` にして、「ページ全体はスクロールさせない」原則を保つ
-- **画面を覆う要素に `position: fixed` を使わない**。fixedはレイアウトビューポート基準のため、挙動Bでは画面下端に届かない。`.update-notice` と `.release-notes-backdrop` は `.app-shell` 基準の `position: absolute` にしてある
+- **画面を覆う要素に `position: fixed` を使わない**。fixedはレイアウトビューポート基準のため、挙動Bでは画面下端に届かない。`.release-notes-backdrop`(リリースノート・おしらせの膜)は `.app-shell` 基準の `position: absolute` にしてある
 - `viewport-fit=cover`(`index.html`)が無いと `env(safe-area-inset-*)` は常に0になる。**外さないこと**
 - ⚠️ iOSは `apple-mobile-web-app-status-bar-style` を**ホーム画面に追加した時点の値でキャッシュする**。メタタグを変えた後は一度削除して追加し直さないと反映されないことがある
 

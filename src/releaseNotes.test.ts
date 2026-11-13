@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareVersions, notesSince, RELEASE_NOTES, type ReleaseNote } from './releaseNotes';
+import { compareVersions, notesSince, pendingUpdateNotes, RELEASE_NOTES, type ReleaseNote } from './releaseNotes';
 
 const notes: ReleaseNote[] = [
   { version: '0.9.6', items: ['ろくのこと'] },
@@ -59,5 +59,25 @@ describe('RELEASE_NOTES', () => {
 
   it('項目が空のノートがない', () => {
     expect(RELEASE_NOTES.every((n) => n.items.length > 0)).toBe(true);
+  });
+});
+
+describe('pendingUpdateNotes', () => {
+  const remote: ReleaseNote[] = [
+    { version: '0.9.16', items: ['a'] },
+    { version: '0.10.0', items: ['b'] },
+    { version: '0.10.1', items: ['c'] },
+  ];
+
+  it('今の版より新しいノートだけを、新しい順に返す', () => {
+    expect(pendingUpdateNotes(remote, '0.9.16').map((n) => n.version)).toEqual(['0.10.1', '0.10.0']);
+  });
+
+  it('今の版が最新なら空', () => {
+    expect(pendingUpdateNotes(remote, '0.10.1')).toEqual([]);
+  });
+
+  it('桁の繰り上がりを数値で比べる(0.10.0 は 0.9.16 より新しい)', () => {
+    expect(pendingUpdateNotes(remote, '0.9.9').map((n) => n.version)).toEqual(['0.10.1', '0.10.0', '0.9.16']);
   });
 });

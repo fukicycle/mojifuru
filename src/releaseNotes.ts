@@ -45,6 +45,17 @@ export function notesSince(
     .sort((a, b) => compareVersions(b.version, a.version));
 }
 
+/**
+ * 配信中の新しい版のリリースノート(release-notes.json)から、今の版より新しいぶんを新しい順に返す。
+ * おしらせで「新しい版 vX.Y.Z があります」と変更点を、更新する前に見せるために使う。
+ * 新しい版のノートは今動いている版の中には無いため、ビルド時に書き出したJSONを配信先から読む。
+ */
+export function pendingUpdateNotes(remoteNotes: readonly ReleaseNote[], currentVersion: string): ReleaseNote[] {
+  return remoteNotes
+    .filter((note) => compareVersions(note.version, currentVersion) > 0)
+    .sort((a, b) => compareVersions(b.version, a.version));
+}
+
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
     version: '0.9.6',
@@ -118,6 +129,14 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       'ひとりで遊んだあとのけっか画面を見やすくしました。作ったことばの一覧が、ほとんど全部そのまま見えます',
       '「はじめて見つけた ことば」は一覧の✨マークにまとめ、同じことばが二か所に並ばないようにしました',
       'ことばの一覧を、せんせきと同じ丸いチップの見た目にそろえました',
+    ],
+  },
+  {
+    version: '0.10.0',
+    items: [
+      '画面の手ざわりを新しくしました。ボタンは押すと しずみこみ、まどは すりガラスのように うしろが すけて見えます(色はこれまでと同じです)',
+      '新しい版のおしらせを、タイトル画面の右上の風鈴にまとめました。点がついたら、変更点を読んでから すきなときに更新できます',
+      '画面の下に出ていた「今すぐ更新」はなくしました',
     ],
   },
 ];

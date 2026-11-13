@@ -6,6 +6,8 @@ import { createRoom, joinRoom, rejoinRoom } from '../firebase/room';
 import { forgetRoom, loadRecentRooms } from '../storage/recentRooms';
 import AccountPanel from './AccountPanel';
 import { DecoChips } from './decor';
+import NoticeButton from './NoticeButton';
+import { useUpdate } from '../update/useUpdate';
 
 /*
  * 画面下のリンクは、アイコンと同じ丸チップの下になまえを置く縦並びにする。
@@ -35,6 +37,7 @@ function formatJoinedAt(at: number): string {
 export default function TitleScreen() {
   const navigate = useNavigate();
   const { playerName, setPlayerName, firebaseEnabled, dawg, dawgError } = useGameContext();
+  const { updateAvailable, openSheet } = useUpdate();
   const [showMultiplayer, setShowMultiplayer] = useState(false);
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -101,6 +104,7 @@ export default function TitleScreen() {
   return (
     <div className="screen screen--center screen--decorated">
       <DecoChips />
+      <NoticeButton />
 
       <h1 className="app-logo">もじふる</h1>
       <p className="app-tagline">降ってくるひらがなをあつめて、単語をつくろう</p>
@@ -226,7 +230,15 @@ export default function TitleScreen() {
           </Link>
         ))}
       </div>
-      <p className="app-version">v{__APP_VERSION__}</p>
+      <p className="app-version">
+        v{__APP_VERSION__}
+        {/* バージョンを見に来た人にも、新しい版があることが分かるようにする */}
+        {updateAvailable && (
+          <button type="button" className="app-version-update" onClick={openSheet}>
+            あたらしい版があります
+          </button>
+        )}
+      </p>
     </div>
   );
 }

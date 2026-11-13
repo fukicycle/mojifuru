@@ -25,6 +25,30 @@
   --border: #f0e2d8;
   --shadow-soft: 0 6px 16px rgba(180, 120, 90, 0.12);
 
+  /*
+   * 質感(凹凸とガラス)は @fukicycle/design から受け取る。色は変えず、
+   * もじふるの地の2色・文字・差し色を渡して、影と光をそこから計算させる。
+   * もじふるは昼のテーマだけなので、index.html の <html data-theme="light"> を外さないこと
+   * (外すと、端末が夜の設定のときに夜の影の計算に切り替わってしまう)。
+   */
+  --fk-ground-1: #fffdf9;
+  --fk-ground-2: #fff3e6;
+  --fk-ink: #4a3f4d;
+  --fk-accent: #ff5fa8;
+  --fk-on-accent: #ffffff;
+
+  /* 浮く(ボタン)・沈む(入力欄・プレイ面)の影と光 */
+  --relief-raised: 5px 5px 12px var(--fk-shade), -5px -5px 12px var(--fk-light);
+  --relief-sunk: inset 4px 4px 10px var(--fk-shade), inset -4px -4px 10px var(--fk-light);
+
+  /*
+   * ガラス:中身の上に浮く器(.panel など)だけに使う。背景の飾りチップ(DecoChips)が
+   * 透けて見える。縁の光はスクロールする器でもずれないよう、::before ではなく
+   * 内側の影で描く。backdrop-filter の値は変数にしない(Safari で効かなくなる)
+   */
+  --glass-fill: var(--fk-glass-fill);
+  --glass-shadow: var(--fk-glass-cast), var(--fk-glass-top), inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+
   --canvas-max-width: 420px;
   /*
    * PCの縦長ウィンドウでも有利にならないよう、横幅と同様に縦幅も上限を設ける。
@@ -229,20 +253,21 @@ button {
   font-weight: 700;
   cursor: pointer;
   color: white;
-  box-shadow: var(--shadow-soft);
-  transition: transform 0.1s ease;
+  box-shadow: var(--relief-raised);
+  transition: box-shadow 0.1s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 押すと地に沈む(色はそのまま) */
 .button:active {
-  transform: scale(0.96);
+  box-shadow: inset 4px 4px 10px rgba(90, 40, 30, 0.22), inset -3px -3px 8px rgba(255, 255, 255, 0.35);
 }
 
 .button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  transform: none;
+  box-shadow: var(--relief-raised);
 }
 
 .button--primary {
@@ -253,11 +278,15 @@ button {
   background: linear-gradient(135deg, var(--color-aqua-strong), var(--color-aqua));
 }
 
+/* 塗らないボタン:地と同じ面のまま浮かせる */
 .button--ghost {
-  background: transparent;
+  background: var(--fk-sheen);
   color: var(--text-soft);
-  box-shadow: none;
-  border: 1px solid var(--border);
+}
+
+.button--ghost:active {
+  background: var(--fk-dent);
+  box-shadow: var(--relief-sunk);
 }
 
 .button--block {
@@ -277,7 +306,10 @@ button {
   font-size: 16px;
   padding: 12px 16px;
   border-radius: 999px;
-  border: 2px solid var(--border);
+  border: 2px solid transparent;
+  background: var(--fk-dent);
+  box-shadow: var(--relief-sunk);
+  color: var(--text);
   outline: none;
   width: 100%;
 }
@@ -357,59 +389,99 @@ button {
   opacity: 0.7;
 }
 
-/* ===== 更新通知 ===== */
+/* ===== おしらせ(風鈴) ===== */
 
 /*
- * position: fixedはレイアウトビューポート基準のため、iOS PWAでビューポートが画面より短い
- * 状態(--ios-bottom-shim > 0)では画面下端に届かない。アプリの器(.app-shell)は
- * 画面の下まで伸びているので、器を基準にしたposition: absoluteで配置する。
+ * タイトル画面の右上に常に置く。.screen--decorated の子は一律 position: relative になるため、
+ * それより強いセレクタで absolute に戻す。セーフエリアの内側に置く。
  */
-.update-notice {
+.screen.screen--decorated > .notice-button,
+.notice-button {
   position: absolute;
-  left: 50%;
-  bottom: calc(16px + var(--safe-bottom));
-  transform: translateX(-50%);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: calc(100% - 32px);
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 8px 8px 8px 18px;
-  box-shadow: var(--shadow-soft);
-  animation: update-notice-in 0.2s ease-out;
+  top: calc(12px + var(--safe-top));
+  right: calc(12px + var(--safe-right));
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--fk-sheen);
+  box-shadow: var(--relief-raised);
+  color: var(--text-h);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.update-notice p {
+.notice-button:active {
+  background: var(--fk-dent);
+  box-shadow: var(--relief-sunk);
+}
+
+.notice-button .icon,
+.icon {
+  display: grid;
+  place-items: center;
+  line-height: 0;
+}
+
+/* まだ開いていないおしらせの点(数字は出さない) */
+.notice-badge {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-magenta-strong);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.notice-update-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-h);
-  white-space: nowrap;
 }
 
-.update-notice .button {
-  padding: 8px 16px;
-  font-size: 13px;
-  white-space: nowrap;
+.notice-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-soft);
 }
 
-@keyframes update-notice-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 12px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
+.notice-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* バージョン表示の横の「あたらしい版があります」 */
+.app-version-update {
+  margin-left: 8px;
+  padding: 6px 2px;
+  border: none;
+  background: none;
+  color: var(--color-magenta-strong);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
 /* ===== リリースノート(アップデート後の初回起動でだけ表示) ===== */
 
-/* .update-notice と同じ理由で、画面を覆う膜もアプリの器(.app-shell)基準にする */
+/*
+ * position: fixedはレイアウトビューポート基準のため、iOS PWAでビューポートが画面より短い
+ * 状態(--ios-bottom-shim > 0)では画面下端に届かない。画面を覆う膜は、画面の下まで
+ * 伸びているアプリの器(.app-shell)を基準にした position: absolute で配置する。
+ * おしらせ(NoticeSheet)もこの膜と器を使う。
+ */
 .release-notes-backdrop {
   position: absolute;
   inset: 0;
@@ -431,10 +503,13 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  background: var(--bg-panel);
   border-radius: 24px;
   padding: 24px 20px 20px;
-  box-shadow: var(--shadow-soft);
+  /* 暗い膜の上に出るので、読みやすいよう面を濃くしたガラスにする */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.76));
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--glass-shadow);
   text-align: center;
   animation: release-notes-pop-in 0.22s ease-out;
 }
@@ -568,8 +643,8 @@ button {
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: var(--bg-panel);
-  box-shadow: var(--shadow-soft);
+  background: var(--fk-sheen);
+  box-shadow: 3px 3px 8px var(--fk-shade), -3px -3px 8px var(--fk-light);
   font-size: 15px;
   line-height: 1;
   display: flex;
@@ -757,7 +832,7 @@ button {
   background: linear-gradient(180deg, #fffdf9, #fff3e6);
   border-radius: 20px;
   overflow: hidden;
-  border: 2px solid var(--border);
+  box-shadow: inset 5px 5px 14px var(--fk-shade), inset -5px -5px 14px var(--fk-light);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1296,8 +1371,10 @@ html.ios-bottom-shim .falling-field {
   overflow-y: auto;
   padding: 0 6px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--glass-shadow);
 }
 
 .virtual-list-row {
@@ -1536,8 +1613,8 @@ html.ios-bottom-shim .falling-field {
   gap: 4px;
   padding: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.75);
-  box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--fk-dent);
+  box-shadow: var(--relief-sunk);
 }
 
 /* トラックの上では非アクティブのタブを地の色に溶かす(is-activeの塗りは残す) */
@@ -1553,8 +1630,10 @@ html.ios-bottom-shim .falling-field {
 .panel {
   padding: 6px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--glass-shadow);
 }
 
 .panel--scroll {
@@ -2164,8 +2243,10 @@ html.ios-bottom-shim .falling-field {
   margin-top: 4px;
   padding: 8px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--glass-shadow);
 }
 
 .recent-rooms-label {
@@ -2615,4 +2696,25 @@ html.ios-bottom-shim .falling-field {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* ===== ガラスが使えない環境・透明を減らす設定では、不透明な白い器にする ===== */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel,
+  .virtual-list,
+  .recent-rooms,
+  .release-notes-panel {
+    background: rgba(255, 255, 255, 0.92);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .panel,
+  .virtual-list,
+  .recent-rooms,
+  .release-notes-panel {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.95);
+  }
 }

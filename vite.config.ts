@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { RELEASE_NOTES } from './src/releaseNotes.ts'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
 
@@ -18,10 +19,23 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    // 新しい版のリリースノートを release-notes.json として書き出す。
+    // おしらせ(src/update/UpdateProvider.tsx)は、新しい版を見つけたときに配信先のこれを読み、
+    // 更新する前に変更点を見せる(新しい版のノートは、今動いている古い版の中には無いため)。
+    {
+      name: 'mojifuru-release-notes',
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'release-notes.json',
+          source: JSON.stringify({ notes: RELEASE_NOTES }),
+        })
+      },
+    },
     VitePWA({
       // 'autoUpdate'は新バージョンをバックグラウンドで無言適用するため反映まで時間がかかる。
-      // 'prompt'にしてSWの登録・更新確認をアプリ側(UpdateNotice)で明示的に制御し、
-      // ユーザが能動的に「今すぐ更新」できるようにする。
+      // 'prompt'にしてSWの登録・更新確認をアプリ側(src/update/UpdateProvider.tsx)で明示的に制御し、
+      // 新しい版はおしらせ(風鈴)で知らせて、ユーザがすきなときに更新できるようにする。
       registerType: 'prompt',
       injectRegister: false,
       includeAssets: ['favicon.svg', 'favicon-96.png', 'apple-touch-icon.png'],
