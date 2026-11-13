@@ -2,24 +2,7 @@ import { useRef, useState } from 'react';
 import { useGameContext } from '../context/GameContext';
 import { ChipTitle } from './decor';
 import { notesSince, RELEASE_NOTES, type ReleaseNote } from '../releaseNotes';
-
-const LAST_SEEN_VERSION_KEY = 'mojifuru:lastSeenVersion';
-
-function loadLastSeenVersion(): string | null {
-  try {
-    return localStorage.getItem(LAST_SEEN_VERSION_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function saveLastSeenVersion(version: string): void {
-  try {
-    localStorage.setItem(LAST_SEEN_VERSION_KEY, version);
-  } catch {
-    // localStorageが使えない環境でも致命的ではないため無視する
-  }
-}
+import { loadLastSeenVersion, saveLastSeenVersion } from '../storage/lastSeenVersion';
 
 /**
  * アップデート後の初回起動で、直前に見たバージョンより新しい変更点を一度だけ表示する。
@@ -49,7 +32,7 @@ export default function ReleaseNotesDialog() {
     }
   }
 
-  // プレイ中に出ると操作の妨げになるため、UpdateNoticeと同様プレイが終わるまで表示だけ保留する
+  // プレイ中に出ると操作の妨げになるため、プレイが終わるまで表示だけ保留する
   if (notes.length === 0 || isPlaying) return null;
 
   // pointerdownで閉じると、同じタップのclickがダイアログの消えた下のボタン

@@ -1,7 +1,7 @@
 {
   "name": "mojifuru",
   "private": true,
-  "version": "0.9.16",
+  "version": "0.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fukicycle/design": "github:fukicycle/design#v0.2.0",
     "firebase": "^12.18.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
